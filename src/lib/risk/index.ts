@@ -17,7 +17,7 @@ import {
   sectorBreakdownCad,
 } from '@/lib/calculations/portfolio';
 import { LEARN } from '@/lib/learning';
-import type { Holding, Portfolio, RiskWarning } from '@/types/portfolio';
+import type { Portfolio, RiskWarning } from '@/types/portfolio';
 import type { TradePreview } from '@/types/trading';
 
 const PANIC_DROP_PCT = 5; // sell when current price ≥5% below avg cost

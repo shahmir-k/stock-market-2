@@ -80,9 +80,12 @@ export function HoldingsTable() {
           </tr>
         </thead>
         <tbody>
-          {rows.map((h) => (
+          {rows.map((h, i) => (
+            // Composite key — defensive against stale duplicate rows in
+            // Supabase. The render order is deterministic, so the index
+            // suffix is stable across renders.
             <tr
-              key={h.symbol}
+              key={`${h.symbol}-${i}`}
               className="border-b rule transition-colors duration-[var(--dur-fast)] hover:bg-surface-muted/40"
             >
               <td className="py-4 pr-4">

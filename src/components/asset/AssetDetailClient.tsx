@@ -41,9 +41,10 @@ export function AssetDetailClient({ symbol }: { symbol: string }) {
   useEffect(() => {
     if (!isHydrated) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     (async () => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
       try {
         const q = await getQuote(symbol);
         if (q.currency === 'USD') {

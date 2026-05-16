@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import { SectorAllocationChart } from '@/components/charts/SectorAllocationChart';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
 import { Eyebrow } from '@/components/common/Eyebrow';
-import { Kpi } from '@/components/common/Kpi';
 import { LearningLink } from '@/components/common/LearningLink';
 import { StatStrip } from '@/components/dashboard/StatStrip';
 import { HoldingsTable } from '@/components/portfolio/HoldingsTable';

@@ -21,9 +21,10 @@ export function AssetHistoryChart({ symbol }: { symbol: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     (async () => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
       try {
         const result = await getProvider(mode).getHistoricalPrices(symbol, 30);
         if (!cancelled) setPoints(result);

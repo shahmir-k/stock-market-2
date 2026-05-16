@@ -1,7 +1,6 @@
 'use client';
 
 import { CurrencyValue } from '@/components/common/CurrencyValue';
-import { Eyebrow } from '@/components/common/Eyebrow';
 import { Kpi, KpiInline } from '@/components/common/Kpi';
 import type { BacktestSummary } from '@/lib/backtest';
 

@@ -6,7 +6,6 @@ import { PortfolioValueChart } from '@/components/charts/PortfolioValueChart';
 import { Button } from '@/components/common/Button';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
 import { Eyebrow } from '@/components/common/Eyebrow';
-import { Kpi } from '@/components/common/Kpi';
 import { LatestWarningCard } from '@/components/dashboard/LatestWarningCard';
 import { RecentTradesList } from '@/components/dashboard/RecentTradesList';
 import { StatStrip } from '@/components/dashboard/StatStrip';
