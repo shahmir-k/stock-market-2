@@ -17,21 +17,25 @@ export function AssetFilters({
     { label: 'ETFs', value: 'ETF' },
   ];
   return (
-    <div className="flex gap-2">
-      {opts.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-            value === o.value
-              ? 'border-accent bg-accent/10 text-accent'
-              : 'border-border text-text-secondary hover:bg-surface-muted'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div className="flex items-baseline gap-5 text-sm">
+      <span className="eyebrow">Filter</span>
+      {opts.map((o) => {
+        const isActive = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`transition-colors duration-[var(--dur-fast)] ${
+              isActive
+                ? 'font-medium text-ink underline underline-offset-4 decoration-[var(--color-accent)]'
+                : 'text-text-secondary hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

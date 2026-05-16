@@ -8,8 +8,8 @@ import {
   type ResultRow,
 } from '@/components/browse/AssetResultsTable';
 import { AssetSearchBar } from '@/components/browse/AssetSearchBar';
-import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
+import { Eyebrow } from '@/components/common/Eyebrow';
 import { LoadingState } from '@/components/common/LoadingState';
 import { useSimulatorStore } from '@/store/simulatorStore';
 import type { AssetSearchResult } from '@/types/market';
@@ -36,8 +36,6 @@ export default function BrowsePage() {
     setLoading(true);
     try {
       const found: AssetSearchResult[] = await searchAssets(q);
-      // Best-effort fetch quotes (mock provider is sync-ish; for real API in
-      // T-040 these will be cached + parallel).
       const enriched: ResultRow[] = await Promise.all(
         found.map(async (r) => {
           try {
@@ -62,23 +60,49 @@ export default function BrowsePage() {
   );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Browse Stocks &amp; ETFs</h1>
+    <div className="space-y-12">
+      <section className="fade-up">
+        <Eyebrow>Discover</Eyebrow>
+        <h1 className="font-display mt-3 text-4xl tracking-tight text-ink md:text-6xl">
+          Find a stock or
+          <br />
+          <em className="text-[var(--color-accent)]">ETF</em> to study.
+        </h1>
+        <p className="mt-3 max-w-prose text-sm leading-relaxed text-text-secondary">
+          Browse equities across NASDAQ, NYSE, NYSE Arca, and TSX. Crypto,
+          options, and futures aren&apos;t supported &mdash; this simulator is
+          for stocks and ETFs only.
+        </p>
+      </section>
 
-      <AssetSearchBar initialQuery={query} onSearch={onSearch} />
-      <AssetFilters value={filter} onChange={setFilter} />
+      <section className="fade-up space-y-4" style={{ animationDelay: '60ms' }}>
+        <AssetSearchBar initialQuery={query} onSearch={onSearch} />
+        <AssetFilters value={filter} onChange={setFilter} />
+      </section>
 
-      {loading ? (
-        <LoadingState message="Searching market data…" />
-      ) : error ? (
-        <ErrorState message={error} />
-      ) : !hasSearched ? (
-        <EmptyState message="Search for a stock or ETF to begin." />
-      ) : filtered.length === 0 ? (
-        <EmptyState message="No matching supported stocks or ETFs found." />
-      ) : (
-        <AssetResultsTable rows={filtered} />
-      )}
+      <section className="fade-up" style={{ animationDelay: '120ms' }}>
+        {loading ? (
+          <LoadingState message="Searching market data…" />
+        ) : error ? (
+          <ErrorState message={error} />
+        ) : !hasSearched ? (
+          <p className="text-sm text-text-secondary">
+            Start typing above to see live market data from Twelve Data.
+          </p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-text-secondary">
+            No supported stocks or ETFs match that query.
+          </p>
+        ) : (
+          <>
+            <p className="mb-4 text-xs text-text-muted">
+              {filtered.length} result{filtered.length === 1 ? '' : 's'}
+              {query ? <> for &ldquo;<span className="tabular">{query}</span>&rdquo;</> : null}
+            </p>
+            <AssetResultsTable rows={filtered} />
+          </>
+        )}
+      </section>
     </div>
   );
 }
