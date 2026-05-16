@@ -1,9 +1,12 @@
 'use client';
 
 import { CurrencyValue } from '@/components/common/CurrencyValue';
-import { MetricCard } from '@/components/common/MetricCard';
+import { Eyebrow } from '@/components/common/Eyebrow';
+import { Kpi, KpiInline } from '@/components/common/Kpi';
 import type { BacktestSummary } from '@/lib/backtest';
 
+// Hero metric pair: giant Final Value on the left, supporting stat strip
+// (Contributed · Gain · CAGR) on the right.
 export function BacktestSummaryCards({
   summary,
   currencyLabel,
@@ -11,56 +14,80 @@ export function BacktestSummaryCards({
   summary: BacktestSummary;
   currencyLabel: string;
 }) {
-  const gainClass = summary.gainNative >= 0 ? 'text-success' : 'text-danger';
+  const gainClass = summary.gainNative >= 0
+    ? 'text-[var(--color-success)]'
+    : 'text-[var(--color-danger)]';
   return (
-    <div className="grid gap-3 sm:grid-cols-4">
-      <MetricCard
-        label="Contributed"
-        value={<MoneyValue amount={summary.contributedNative} currency={currencyLabel} />}
-      />
-      <MetricCard
-        label="Final Value"
-        value={<MoneyValue amount={summary.finalValueNative} currency={currencyLabel} />}
-      />
-      <MetricCard
-        label="Gain"
-        value={
+    <div className="grid gap-10 md:grid-cols-2 md:gap-16">
+      <Kpi
+        label={`Final value (${currencyLabel})`}
+        value={<CurrencyValue value={summary.finalValueNative} />}
+        sub={
           <span className={gainClass}>
-            <MoneyValue amount={summary.gainNative} currency={currencyLabel} showSign />
+            {summary.gainNative >= 0 ? '+' : ''}
+            <CurrencyValue value={summary.gainNative} />{' '}
+            <span className="text-text-muted">vs your contributions</span>
           </span>
         }
       />
-      <MetricCard
-        label="Annual Return (CAGR)"
-        value={
-          <span className={summary.cagrPercent >= 0 ? 'text-success' : 'text-danger'}>
-            {summary.cagrPercent >= 0 ? '+' : ''}
-            {summary.cagrPercent.toFixed(2)}%
-          </span>
-        }
-      />
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 self-end border-t border-b rule py-5 sm:grid-cols-3">
+        <KpiInline
+          label="Contributed"
+          value={<CurrencyValue value={summary.contributedNative} />}
+        />
+        <KpiInline
+          label="Total return"
+          value={
+            <span
+              className={
+                summary.totalReturnPercent >= 0
+                  ? 'text-[var(--color-success)]'
+                  : 'text-[var(--color-danger)]'
+              }
+            >
+              {summary.totalReturnPercent >= 0 ? '+' : ''}
+              {summary.totalReturnPercent.toFixed(2)}%
+            </span>
+          }
+        />
+        <KpiInline
+          label="CAGR"
+          value={
+            <span
+              className={
+                summary.cagrPercent >= 0
+                  ? 'text-[var(--color-success)]'
+                  : 'text-[var(--color-danger)]'
+              }
+            >
+              {summary.cagrPercent >= 0 ? '+' : ''}
+              {summary.cagrPercent.toFixed(2)}%
+            </span>
+          }
+        />
+      </div>
     </div>
   );
 }
 
-function MoneyValue({
-  amount,
-  currency,
-  showSign,
+// Hairline-underline form field. Reused across all backtest sub-tabs.
+function FieldRoot({
+  label,
+  children,
 }: {
-  amount: number;
-  currency: string;
-  showSign?: boolean;
+  label: string;
+  children: React.ReactNode;
 }) {
-  // For USD or CAD the CurrencyValue component formats with the $ prefix
-  // already; just append a currency label so users know which currency they
-  // are looking at.
   return (
-    <>
-      <CurrencyValue value={amount} showSign={showSign} /> {currency}
-    </>
+    <label className="flex flex-col gap-1.5">
+      <span className="eyebrow">{label}</span>
+      {children}
+    </label>
   );
 }
+
+const INPUT_BASE =
+  'bg-transparent border-b rule pb-1 text-base tabular text-ink outline-none transition-colors duration-[var(--dur-fast)] focus:border-[var(--color-accent)]';
 
 export function StartDatePicker({
   value,
@@ -71,16 +98,15 @@ export function StartDatePicker({
 }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <label className="flex flex-col text-sm">
-      <span className="font-medium text-text-primary">Start date</span>
+    <FieldRoot label="Start date">
       <input
         type="date"
         value={value}
         max={today}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
+        className={INPUT_BASE}
       />
-    </label>
+    </FieldRoot>
   );
 }
 
@@ -96,17 +122,16 @@ export function MoneyInput({
   step?: number;
 }) {
   return (
-    <label className="flex flex-col text-sm">
-      <span className="font-medium text-text-primary">{label}</span>
+    <FieldRoot label={label}>
       <input
         type="number"
         value={value}
         min={0}
         step={step}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
-        className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
+        className={INPUT_BASE}
       />
-    </label>
+    </FieldRoot>
   );
 }
 
@@ -122,16 +147,15 @@ export function SymbolInput({
   placeholder?: string;
 }) {
   return (
-    <label className="flex flex-col text-sm">
-      <span className="font-medium text-text-primary">{label}</span>
+    <FieldRoot label={label}>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value.toUpperCase())}
         placeholder={placeholder}
-        className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm uppercase focus:border-accent focus:outline-none"
+        className={`${INPUT_BASE} uppercase tracking-wide`}
       />
-    </label>
+    </FieldRoot>
   );
 }
 

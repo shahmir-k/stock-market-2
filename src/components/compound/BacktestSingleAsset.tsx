@@ -3,7 +3,9 @@
 import { useState } from 'react';
 
 import { BacktestChart } from '@/components/charts/BacktestChart';
+import { Button } from '@/components/common/Button';
 import { ErrorState } from '@/components/common/ErrorState';
+import { Eyebrow } from '@/components/common/Eyebrow';
 import { LoadingState } from '@/components/common/LoadingState';
 import {
   type BacktestSummary,
@@ -39,8 +41,6 @@ export function BacktestSingleAsset({ mode }: { mode: Mode }) {
     try {
       const provider = getProvider(dataMode);
       const today = new Date().toISOString().slice(0, 10);
-      // Fetch via the provider abstraction. For the API provider this
-      // triggers /api/market/history with start_date/end_date.
       const url = `/api/market/history?symbol=${encodeURIComponent(symbol)}&interval=1day&start_date=${startDate}&end_date=${today}`;
       let points: Awaited<ReturnType<typeof provider.getHistoricalPrices>>;
       if (dataMode === 'API') {
@@ -53,8 +53,6 @@ export function BacktestSingleAsset({ mode }: { mode: Mode }) {
         }
         points = json.data.points;
       } else {
-        // Mock mode — compute outputsize from the date range so monthly DCA
-        // contributions span the full requested period (~252 trading days/yr).
         const startMs = new Date(startDate).getTime();
         const days = Math.max(
           30,
@@ -67,7 +65,6 @@ export function BacktestSingleAsset({ mode }: { mode: Mode }) {
         setRunning(false);
         return;
       }
-      // Try to detect currency from a quote fetch (for label only).
       const q = await provider.getQuote(symbol).catch(() => null);
       if (q?.currency) setCurrencyLabel(q.currency);
 
@@ -84,8 +81,9 @@ export function BacktestSingleAsset({ mode }: { mode: Mode }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-4">
+    <div className="space-y-10">
+      {/* Inputs — hairline underlines, no boxed card */}
+      <div className="grid items-end gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
         <SymbolInput value={symbol} onChange={setSymbol} />
         <StartDatePicker value={startDate} onChange={setStartDate} />
         <MoneyInput
@@ -93,25 +91,29 @@ export function BacktestSingleAsset({ mode }: { mode: Mode }) {
           value={amount}
           onChange={setAmount}
         />
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="md"
           onClick={() => void onRun()}
           disabled={running || !symbol || !startDate || amount <= 0}
-          className="self-end rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+          loading={running}
         >
-          {running ? 'Running…' : 'Run Backtest'}
-        </button>
+          Run backtest →
+        </Button>
       </div>
 
       {running ? <LoadingState message="Fetching historical prices…" /> : null}
       {error ? <ErrorState title="Backtest failed" message={error} /> : null}
       {summary ? (
-        <div className="space-y-4">
+        <div className="space-y-10">
           <BacktestSummaryCards summary={summary} currencyLabel={currencyLabel} />
-          <section className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="mb-3 text-base font-semibold">
-              {symbol} value over time ({currencyLabel})
-            </h3>
+          <section>
+            <header className="mb-4 border-b rule pb-3">
+              <Eyebrow>{symbol} value over time</Eyebrow>
+              <h3 className="font-display mt-2 text-xl text-ink">
+                In {currencyLabel}
+              </h3>
+            </header>
             <BacktestChart points={summary.points} currencyLabel={currencyLabel} />
           </section>
         </div>

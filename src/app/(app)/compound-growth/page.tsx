@@ -2,51 +2,59 @@
 
 import { useState } from 'react';
 
+import { Eyebrow } from '@/components/common/Eyebrow';
+import { Tabs } from '@/components/common/Tabs';
 import { Backtest } from '@/components/compound/Backtest';
 import { ForwardCompound } from '@/components/compound/ForwardCompound';
 
 type Mode = 'FORWARD' | 'BACKTEST';
 
+const TABS = [
+  { id: 'FORWARD' as const, label: 'Project forward' },
+  { id: 'BACKTEST' as const, label: 'Backtest (historical)' },
+];
+
 export default function CompoundGrowthPage() {
   const [mode, setMode] = useState<Mode>('FORWARD');
 
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold">
-          {mode === 'FORWARD' ? 'Compound Growth Tool' : 'Historical Backtest'}
-        </h1>
-        <nav role="tablist" className="flex gap-2">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'FORWARD'}
-            onClick={() => setMode('FORWARD')}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-              mode === 'FORWARD'
-                ? 'border-accent bg-accent/10 text-accent'
-                : 'border-border text-text-secondary hover:bg-surface-muted'
-            }`}
-          >
-            Project Forward
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'BACKTEST'}
-            onClick={() => setMode('BACKTEST')}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-              mode === 'BACKTEST'
-                ? 'border-accent bg-accent/10 text-accent'
-                : 'border-border text-text-secondary hover:bg-surface-muted'
-            }`}
-          >
-            Backtest (Historical)
-          </button>
-        </nav>
-      </header>
+  const heading =
+    mode === 'FORWARD'
+      ? { eyebrow: 'Forward calculator', title: 'Project the future.' }
+      : { eyebrow: 'Historical backtest', title: 'Look at the past.' };
 
-      {mode === 'FORWARD' ? <ForwardCompound /> : <Backtest />}
+  return (
+    <div className="space-y-12">
+      <section className="fade-up">
+        <Eyebrow>{heading.eyebrow}</Eyebrow>
+        <h1 className="font-display mt-3 text-5xl tracking-tight text-ink md:text-7xl">
+          {mode === 'FORWARD' ? (
+            <>
+              Project the
+              <br />
+              <em className="text-[var(--color-accent)]">future.</em>
+            </>
+          ) : (
+            <>
+              Look at the
+              <br />
+              <em className="text-[var(--color-accent)]">past.</em>
+            </>
+          )}
+        </h1>
+        <p className="mt-4 max-w-prose text-base leading-relaxed text-text-secondary">
+          {mode === 'FORWARD'
+            ? 'Set a starting amount, a monthly contribution, an expected annual return, and a time horizon. See what compounding can do over time.'
+            : 'Pick a real ticker and a real past date. See what would have actually happened to a lump sum, a monthly contribution, or a multi-asset portfolio.'}
+        </p>
+      </section>
+
+      <section className="fade-up" style={{ animationDelay: '60ms' }}>
+        <Tabs<Mode> items={TABS} active={mode} onChange={setMode} />
+      </section>
+
+      <section className="fade-up" style={{ animationDelay: '120ms' }}>
+        {mode === 'FORWARD' ? <ForwardCompound /> : <Backtest />}
+      </section>
     </div>
   );
 }

@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 
 import { CompoundGrowthChart } from '@/components/charts/CompoundGrowthChart';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
+import { Eyebrow } from '@/components/common/Eyebrow';
+import { Kpi, KpiInline } from '@/components/common/Kpi';
 import { LearningLink } from '@/components/common/LearningLink';
-import { MetricCard } from '@/components/common/MetricCard';
 import { calculateCompound } from '@/lib/compound';
 import { LEARN } from '@/lib/learning';
 
@@ -27,59 +28,61 @@ export function ForwardCompound() {
   );
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 rounded-xl border border-border bg-surface p-6 sm:grid-cols-2 lg:grid-cols-4">
-        <NumField
-          label="Starting Amount (CAD)"
-          value={starting}
-          onChange={setStarting}
-        />
-        <NumField
-          label="Monthly Contribution (CAD)"
-          value={monthly}
-          onChange={setMonthly}
-        />
-        <NumField
-          label="Annual Return (%)"
-          value={annual}
-          onChange={setAnnual}
-          step={0.1}
-        />
-        <NumField label="Years Invested" value={years} onChange={setYears} />
+    <div className="space-y-12">
+      {/* Inputs — hairline underline pattern, no boxed card */}
+      <section className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+        <NumField label="Starting amount" prefix="$" value={starting} onChange={setStarting} />
+        <NumField label="Monthly contribution" prefix="$" value={monthly} onChange={setMonthly} />
+        <NumField label="Annual return" suffix="%" value={annual} onChange={setAnnual} step={0.1} />
+        <NumField label="Years invested" value={years} onChange={setYears} />
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        <MetricCard
-          label="Total Contributed"
-          value={<CurrencyValue value={result.totalContributedCad} />}
-        />
-        <MetricCard
-          label="Estimated Future Value"
+      {/* Hero result: giant serif future value + supporting stats */}
+      <section className="grid gap-10 md:grid-cols-2 md:gap-16">
+        <Kpi
+          label="Estimated future value"
           value={<CurrencyValue value={result.futureValueCad} />}
-        />
-        <MetricCard
-          label="Growth from Compounding"
-          value={
-            <span className="text-success">
-              <CurrencyValue value={result.growthCad} showSign />
+          sub={
+            <span className="text-[var(--color-success)]">
+              +<CurrencyValue value={result.growthCad} />{' '}
+              <span className="text-text-muted">from compounding</span>
             </span>
           }
         />
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 self-end border-t border-b rule py-5">
+          <KpiInline
+            label="Total contributed"
+            value={<CurrencyValue value={result.totalContributedCad} />}
+          />
+          <KpiInline
+            label="Time horizon"
+            value={
+              <span>
+                {years} <span className="text-text-muted">years</span>
+              </span>
+            }
+          />
+        </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-6">
-        <h2 className="mb-3 text-base font-semibold">
-          Contributions vs Compounded Value
-        </h2>
+      {/* Chart — full width, no boxed card */}
+      <section>
+        <header className="mb-4 border-b rule pb-3">
+          <Eyebrow>Growth over time</Eyebrow>
+          <h2 className="font-display mt-2 text-2xl text-ink">
+            Contributions vs compounded value
+          </h2>
+        </header>
         <CompoundGrowthChart points={result.yearlyPoints} />
       </section>
 
-      <p className="rounded-lg border border-info/30 bg-info/5 p-3 text-sm text-text-secondary">
-        This is an educational estimate. Investment returns are not guaranteed.
+      <p className="max-w-prose text-sm text-text-secondary">
+        These figures are an educational estimate. Investment returns vary year
+        to year and are not guaranteed.
       </p>
 
-      <section className="rounded-xl border border-border bg-surface p-4 text-sm text-text-secondary">
-        Learn:{' '}
+      <section className="border-t rule pt-6 text-sm text-text-muted">
+        Read:{' '}
         <LearningLink slug={LEARN.COMPOUND_GROWTH} /> ·{' '}
         <LearningLink slug={LEARN.ANNUAL_RETURN} /> ·{' '}
         <LearningLink slug={LEARN.TIME_HORIZON} /> ·{' '}
@@ -94,23 +97,31 @@ function NumField({
   value,
   onChange,
   step = 1,
+  prefix,
+  suffix,
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
   step?: number;
+  prefix?: string;
+  suffix?: string;
 }) {
   return (
-    <label className="flex flex-col text-sm">
-      <span className="font-medium text-text-primary">{label}</span>
-      <input
-        type="number"
-        value={value}
-        min={0}
-        step={step}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
-        className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
-      />
+    <label className="flex flex-col gap-1.5">
+      <span className="eyebrow">{label}</span>
+      <span className="flex items-baseline gap-1 border-b rule pb-1">
+        {prefix ? <span className="text-text-muted">{prefix}</span> : null}
+        <input
+          type="number"
+          value={value}
+          min={0}
+          step={step}
+          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          className="flex-1 bg-transparent font-display tabular text-2xl text-ink outline-none"
+        />
+        {suffix ? <span className="text-text-muted">{suffix}</span> : null}
+      </span>
     </label>
   );
 }
