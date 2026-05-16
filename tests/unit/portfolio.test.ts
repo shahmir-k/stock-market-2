@@ -53,6 +53,17 @@ describe('per-holding metrics', () => {
 });
 
 describe('aggregates', () => {
+  it('U-POR-006: investedValueCad returns 0 for empty array', () => {
+    expect(investedValueCad([])).toBe(0);
+  });
+
+  it('U-POR-017: negative unrealized G/L reported when price drops', () => {
+    const loss = holdingUnrealizedGainLoss(
+      h({ quantity: 1, averageCostCad: 100, currentPriceCad: 80 }),
+    );
+    expect(loss).toBe(-20);
+  });
+
   it('investedValue sums holdings', () => {
     expect(
       investedValueCad([

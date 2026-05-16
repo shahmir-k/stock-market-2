@@ -38,4 +38,8 @@ describe('isHoldingClosed', () => {
     expect(isHoldingClosed(HOLDING_CLOSE_EPSILON)).toBe(true);
     expect(isHoldingClosed(0.0001)).toBe(false);
   });
+
+  it('U-COST-008: just above epsilon → open', () => {
+    expect(isHoldingClosed(HOLDING_CLOSE_EPSILON + 1e-9)).toBe(false);
+  });
 });

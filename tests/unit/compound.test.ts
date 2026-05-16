@@ -37,4 +37,38 @@ describe('calculateCompound', () => {
     expect(r.yearlyPoints[0].year).toBe(0);
     expect(r.yearlyPoints[5].year).toBe(5);
   });
+
+  it('U-CMP-004: starting amount only, 0 monthly, grows from start', () => {
+    const r = calculateCompound({
+      startingAmount: 1000,
+      monthlyContribution: 0,
+      annualReturnPercent: 10,
+      years: 1,
+    });
+    expect(r.totalContributedCad).toBe(1000);
+    // ~1000 × 1.10 (with monthly compounding) ≈ 1104
+    expect(r.futureValueCad).toBeGreaterThan(1100);
+    expect(r.futureValueCad).toBeLessThan(1110);
+  });
+
+  it('U-CMP-005: negative return rate produces future < contributions', () => {
+    const r = calculateCompound({
+      startingAmount: 10_000,
+      monthlyContribution: 0,
+      annualReturnPercent: -5,
+      years: 10,
+    });
+    expect(r.futureValueCad).toBeLessThan(r.totalContributedCad);
+    expect(r.growthCad).toBeLessThan(0);
+  });
+
+  it('U-CMP-006: 1-year horizon produces 2 yearly points (year 0 + year 1)', () => {
+    const r = calculateCompound({
+      startingAmount: 100,
+      monthlyContribution: 50,
+      annualReturnPercent: 7,
+      years: 1,
+    });
+    expect(r.yearlyPoints.length).toBe(2);
+  });
 });

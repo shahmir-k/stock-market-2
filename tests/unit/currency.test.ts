@@ -25,6 +25,11 @@ describe('fromCad', () => {
   it('USD divides by rate', () => {
     expect(fromCad(137, 'USD', 1.37)).toBeCloseTo(100, 5);
   });
+
+  it('U-FX-005: CAD passes through unchanged', () => {
+    expect(fromCad(100, 'CAD', 1.5)).toBe(100);
+    expect(fromCad(100, 'CAD', null)).toBe(100);
+  });
 });
 
 describe('assertFxAvailable', () => {

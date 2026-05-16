@@ -61,6 +61,27 @@ describe('buildBuyPreview', () => {
     expect(p.totalCad).toBe(200);
     expect(p.estimatedCashAfterCad).toBe(4800);
   });
+
+  it('U-TRD-002: rejects NaN qty', () => {
+    expect(() =>
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: Number.NaN },
+        quote: cadQuote(),
+        fxRate: 1,
+        currentCashCad: 5000,
+      }),
+    ).toThrow(TradeValidationError);
+  });
+
+  it('U-TRD-005: preview carries quoteTimestamp from input', () => {
+    const p = buildBuyPreview({
+      order: { symbol: 'TD.TO', quantity: 1 },
+      quote: cadQuote({ quoteTimestamp: '2025-06-01T12:00:00Z' }),
+      fxRate: 1,
+      currentCashCad: 5000,
+    });
+    expect(p.quoteTimestamp).toBe('2025-06-01T12:00:00Z');
+  });
 });
 
 describe('applyBuy', () => {
@@ -137,6 +158,49 @@ describe('applySell', () => {
       portfolio,
       buildBuyPreview({
         order: { symbol: 'TD.TO', quantity: 1 },
+        quote: cadQuote({ priceNative: 100 }),
+        fxRate: 1,
+        currentCashCad: portfolio.cashCad,
+      }),
+    ).portfolio;
+    const sell = buildSellPreview({
+      order: { symbol: 'TD.TO', quantity: 1 },
+      quote: cadQuote({ priceNative: 100 }),
+      fxRate: 1,
+      holding: portfolio.holdings[0],
+      currentCashCad: portfolio.cashCad,
+    });
+    portfolio = applySell(portfolio, sell).portfolio;
+    expect(portfolio.holdings.length).toBe(0);
+  });
+
+  it('U-TRD-008: sell preview populates estimatedRealizedGainLossCad', () => {
+    let portfolio = emptyPortfolio();
+    portfolio = applyBuy(
+      portfolio,
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: 2 },
+        quote: cadQuote({ priceNative: 100 }),
+        fxRate: 1,
+        currentCashCad: portfolio.cashCad,
+      }),
+    ).portfolio;
+    const sp = buildSellPreview({
+      order: { symbol: 'TD.TO', quantity: 1 },
+      quote: cadQuote({ priceNative: 130 }),
+      fxRate: 1,
+      holding: portfolio.holdings[0],
+      currentCashCad: portfolio.cashCad,
+    });
+    expect(sp.estimatedRealizedGainLossCad).toBe(30);
+  });
+
+  it('U-TRD-018: epsilon-leftover full sell removes holding', () => {
+    let portfolio = emptyPortfolio();
+    portfolio = applyBuy(
+      portfolio,
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: 1.0000005 },
         quote: cadQuote({ priceNative: 100 }),
         fxRate: 1,
         currentCashCad: portfolio.cashCad,
