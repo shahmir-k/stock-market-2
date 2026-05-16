@@ -170,6 +170,13 @@ function maybeSupabase() {
 // network round-trip and one bootstrap insert. See syncFromSupabase action.
 let inFlightSync: Promise<void> | null = null;
 
+// Same pattern for refreshHoldingQuotes — React StrictMode + page-mount
+// effect + marketDataMode dep change can fire this two or three times in
+// quick succession. Without dedupe, each call did its own DELETE+INSERT
+// against the holdings table and concurrent inserts produced duplicate
+// rows (which the in-memory state then double-counted as portfolio value).
+let inFlightHoldingsRefresh: Promise<void> | null = null;
+
 function toPersisted(s: SimulatorStoreState): PersistedState {
   return {
     version: s.version,
@@ -391,12 +398,21 @@ export const useSimulatorStore = create<SimulatorStore>()((set, get) => ({
   },
 
   refreshHoldingQuotes: async () => {
-    const provider = getProvider(get().marketDataMode);
-    const holdings = get().portfolio.holdings;
-    if (holdings.length === 0) return;
-    const symbols = holdings.map((h) => h.symbol);
-    const quotes = await provider.getQuotes(symbols);
-    const quoteBySymbol = new Map(quotes.map((q) => [q.symbol, q]));
+    // Dedupe concurrent callers. Without this, StrictMode + the page-mount
+    // useEffect + a marketDataMode dep change can fire 2–3 times in quick
+    // succession, each one DELETE+INSERT-ing the holdings table and
+    // racing into duplicate rows.
+    if (inFlightHoldingsRefresh) {
+      await inFlightHoldingsRefresh;
+      return;
+    }
+    const promise = (async () => {
+      const provider = getProvider(get().marketDataMode);
+      const holdings = get().portfolio.holdings;
+      if (holdings.length === 0) return;
+      const symbols = holdings.map((h) => h.symbol);
+      const quotes = await provider.getQuotes(symbols);
+      const quoteBySymbol = new Map(quotes.map((q) => [q.symbol, q]));
 
     // FX rate refresh — needed for USD assets.
     const needsUsdFx = holdings.some((h) => h.nativeCurrency === 'USD');
@@ -450,16 +466,23 @@ export const useSimulatorStore = create<SimulatorStore>()((set, get) => ({
     const supabase = maybeSupabase();
     const userId = get().user?.id;
     const portfolioId = get().portfolioId;
-    if (supabase && userId && portfolioId) {
-      try {
-        await persistHoldingsRefresh(supabase, {
-          userId,
-          portfolioId,
-          holdings: updatedHoldings,
-        });
-      } catch {
-        // Non-fatal — local state still updated.
+      if (supabase && userId && portfolioId) {
+        try {
+          await persistHoldingsRefresh(supabase, {
+            userId,
+            portfolioId,
+            holdings: updatedHoldings,
+          });
+        } catch {
+          // Non-fatal — local state still updated.
+        }
       }
+    })();
+    inFlightHoldingsRefresh = promise;
+    try {
+      await promise;
+    } finally {
+      inFlightHoldingsRefresh = null;
     }
   },
 

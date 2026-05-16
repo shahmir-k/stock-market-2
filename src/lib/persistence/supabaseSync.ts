@@ -252,30 +252,14 @@ export async function persistAfterTrade(
     })
     .eq('id', portfolioId);
 
-  // 3. Replace holdings (simple sync — delete then insert open positions).
-  // For MVP this is acceptable; an optimised diff could come later.
-  await supabase.from('holdings').delete().eq('portfolio_id', portfolioId);
-  if (portfolio.holdings.length > 0) {
-    await supabase.from('holdings').insert(
-      portfolio.holdings.map((h) => ({
-        portfolio_id: portfolioId,
-        user_id: userId,
-        symbol: h.symbol,
-        asset_name: h.assetName,
-        asset_type: h.assetType,
-        exchange: h.exchange ?? null,
-        sector: h.sector ?? null,
-        quantity: h.quantity,
-        average_cost_cad: h.averageCostCad,
-        current_price_native: h.currentPriceNative,
-        current_price_cad: h.currentPriceCad,
-        native_currency: h.nativeCurrency as 'CAD' | 'USD',
-        fx_rate_to_cad: h.fxRateToCad,
-        last_quote_at: h.lastQuoteAt || null,
-        quote_freshness: h.quoteFreshness ?? null,
-      })),
-    );
-  }
+  // 3. Sync holdings via the shared upsert helper. Same pattern as
+  // persistHoldingsRefresh — DELETE+INSERT used to race and produce
+  // duplicate rows; UPSERT on (portfolio_id, symbol) is idempotent.
+  await persistHoldingsRefresh(supabase, {
+    userId,
+    portfolioId,
+    holdings: portfolio.holdings,
+  });
 
   // 4. Insert snapshot.
   await supabase.from('portfolio_snapshots').insert({
@@ -292,6 +276,12 @@ export async function persistAfterTrade(
 // Lighter-touch version of persistAfterTrade — only refreshes the holdings
 // table (with updated prices/sector). Used by refreshHoldingQuotes so the
 // freshness + sector backfill persists across page reloads / devices.
+//
+// Uses UPSERT on (portfolio_id, symbol) instead of DELETE+INSERT to avoid
+// the race condition where two concurrent calls would interleave their
+// DELETE and INSERT and produce duplicate rows. We also delete any rows
+// for symbols that aren't in the current portfolio (sold positions),
+// scoped to this portfolio_id, so the table stays in sync.
 export async function persistHoldingsRefresh(
   supabase: DB,
   args: {
@@ -301,9 +291,16 @@ export async function persistHoldingsRefresh(
   },
 ): Promise<void> {
   const { userId, portfolioId, holdings } = args;
-  await supabase.from('holdings').delete().eq('portfolio_id', portfolioId);
-  if (holdings.length === 0) return;
-  await supabase.from('holdings').insert(
+
+  if (holdings.length === 0) {
+    await supabase.from('holdings').delete().eq('portfolio_id', portfolioId);
+    return;
+  }
+
+  // Upsert current open positions. The unique index on
+  // (portfolio_id, symbol) means an existing row with the same key is
+  // updated in place rather than producing a duplicate.
+  await supabase.from('holdings').upsert(
     holdings.map((h) => ({
       portfolio_id: portfolioId,
       user_id: userId,
@@ -321,7 +318,18 @@ export async function persistHoldingsRefresh(
       last_quote_at: h.lastQuoteAt || null,
       quote_freshness: h.quoteFreshness ?? null,
     })),
+    { onConflict: 'portfolio_id,symbol' },
   );
+
+  // Remove any rows for symbols that no longer appear in the portfolio
+  // (e.g., a position closed in another tab). Scope strictly to this
+  // portfolio so we never touch another user's data.
+  const keepSymbols = holdings.map((h) => h.symbol);
+  await supabase
+    .from('holdings')
+    .delete()
+    .eq('portfolio_id', portfolioId)
+    .not('symbol', 'in', `(${keepSymbols.map((s) => `"${s}"`).join(',')})`);
 }
 
 export async function persistWarning(
