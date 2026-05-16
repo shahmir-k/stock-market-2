@@ -3,19 +3,16 @@
 import Link from 'next/link';
 
 import { PortfolioValueChart } from '@/components/charts/PortfolioValueChart';
-import { LatestWarningCard } from '@/components/dashboard/LatestWarningCard';
+import { Button } from '@/components/common/Button';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
-import { LearningLink } from '@/components/common/LearningLink';
-import { MetricCard } from '@/components/common/MetricCard';
-import { ReturnValue } from '@/components/common/ReturnValue';
-import { StaleQuoteBanner } from '@/components/common/StaleQuoteBanner';
+import { Eyebrow } from '@/components/common/Eyebrow';
+import { Kpi } from '@/components/common/Kpi';
+import { LatestWarningCard } from '@/components/dashboard/LatestWarningCard';
+import { RecentTradesList } from '@/components/dashboard/RecentTradesList';
+import { StatStrip } from '@/components/dashboard/StatStrip';
 import { useQuoteRefresh } from '@/lib/market-data/useQuoteRefresh';
-import { LEARN } from '@/lib/learning';
 import {
-  selectCashCad,
-  selectInvestedValueCad,
   selectPortfolioValueCad,
-  selectRecentTransactions,
   selectTotalReturnCad,
   selectTotalReturnPercent,
   useSimulatorStore,
@@ -25,90 +22,94 @@ export default function DashboardPage() {
   useQuoteRefresh();
 
   const total = useSimulatorStore(selectPortfolioValueCad);
-  const cash = useSimulatorStore(selectCashCad);
-  const invested = useSimulatorStore(selectInvestedValueCad);
   const returnCad = useSimulatorStore(selectTotalReturnCad);
   const returnPct = useSimulatorStore(selectTotalReturnPercent);
-  const recentTx = useSimulatorStore(selectRecentTransactions);
+  const displayName = useSimulatorStore((s) => s.user?.displayName);
+  const isPositive = returnCad >= 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-      </div>
+    <div className="space-y-12">
+      {/* Hero: greeting + giant serif portfolio value + signed return */}
+      <section className="fade-up">
+        <Eyebrow>{displayName ? `Hello, ${displayName}` : 'Your portfolio'}</Eyebrow>
+        <h1 className="font-display mt-3 text-5xl tracking-tight text-ink md:text-7xl tabular">
+          <CurrencyValue value={total} />
+        </h1>
+        <p className="mt-3 text-sm text-text-secondary">
+          <span
+            className={`tabular ${
+              isPositive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+            }`}
+          >
+            {isPositive ? '+' : ''}
+            <CurrencyValue value={returnCad} />
+            {' · '}
+            {isPositive ? '+' : ''}
+            {returnPct.toFixed(2)}%
+          </span>{' '}
+          <span className="text-text-muted">since you started</span>
+        </p>
+      </section>
 
-      <StaleQuoteBanner />
+      {/* Inline stat strip: Cash · Invested · Realized · Unrealized */}
+      <section className="fade-up" style={{ animationDelay: '60ms' }}>
+        <StatStrip />
+      </section>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Portfolio" value={<CurrencyValue value={total} />} />
-        <MetricCard
-          label="Return"
-          value={<ReturnValue cad={returnCad} percent={returnPct} layout="stacked" />}
-        />
-        <MetricCard label="Cash" value={<CurrencyValue value={cash} />} />
-        <MetricCard label="Invested" value={<CurrencyValue value={invested} />} />
-      </div>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-6 lg:col-span-2">
-          <h2 className="text-base font-semibold">Portfolio Value Over Time</h2>
-          <div className="mt-4">
+      {/* Asymmetric Bento: chart (2/3) + warning (1/3) */}
+      <section className="fade-up grid gap-12 md:grid-cols-3 md:gap-10" style={{ animationDelay: '120ms' }}>
+        <div className="md:col-span-2">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <Eyebrow>Portfolio value</Eyebrow>
+              <h2 className="font-display mt-2 text-2xl text-ink">Over time</h2>
+            </div>
+          </div>
+          <div className="mt-6">
             <PortfolioValueChart />
           </div>
         </div>
-        <div className="space-y-4">
+        <aside>
           <LatestWarningCard />
-          <div className="rounded-xl border border-border bg-surface p-6">
-            <h2 className="text-base font-semibold">Next Action</h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            Browse stocks or ETFs to make your first trade.
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/browse"
-              className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-            >
-              Browse
-            </Link>
+        </aside>
+      </section>
+
+      {/* Recent trades + next action */}
+      <section className="fade-up grid gap-12 md:grid-cols-3 md:gap-10" style={{ animationDelay: '180ms' }}>
+        <div className="md:col-span-2">
+          <div className="flex items-end justify-between gap-3 border-b rule pb-3">
+            <div>
+              <Eyebrow>Activity</Eyebrow>
+              <h2 className="font-display mt-2 text-2xl text-ink">Recent trades</h2>
             </div>
+            <Link
+              href="/portfolio"
+              className="text-sm text-text-secondary hover:text-ink transition-colors duration-[var(--dur-fast)]"
+            >
+              All transactions →
+            </Link>
+          </div>
+          <div className="mt-4">
+            <RecentTradesList limit={5} />
           </div>
         </div>
-      </section>
-
-      <section className="rounded-xl border border-border bg-surface p-6">
-        <h2 className="text-base font-semibold">Recent Trades</h2>
-        {recentTx.length === 0 ? (
-          <p className="mt-2 text-sm text-text-secondary">No trades yet.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-border text-sm">
-            {recentTx.slice(0, 5).map((t) => (
-              <li key={t.id} className="flex justify-between py-2">
-                <span>
-                  <span
-                    className={`mr-2 rounded px-1.5 py-0.5 text-[11px] font-semibold ${
-                      t.type === 'BUY'
-                        ? 'bg-accent/10 text-accent'
-                        : 'bg-warning/15 text-warning'
-                    }`}
-                  >
-                    {t.type}
-                  </span>
-                  {t.symbol} · {t.quantity} shares
-                </span>
-                <span className="tabular text-text-secondary">
-                  <CurrencyValue value={t.totalCad} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-border bg-surface p-4 text-sm text-text-secondary">
-        Learn:{' '}
-        <LearningLink slug={LEARN.PORTFOLIO_VALUE} /> ·{' '}
-        <LearningLink slug={LEARN.TOTAL_RETURN} /> ·{' '}
-        <LearningLink slug={LEARN.DIVERSIFICATION} />
+        <aside>
+          <Eyebrow>Next move</Eyebrow>
+          <h3 className="font-display mt-2 text-xl text-ink">
+            What looks interesting today?
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Browse stocks and ETFs across NASDAQ, NYSE, NYSE Arca, and TSX.
+            Search by ticker or company name.
+          </p>
+          <div className="mt-4">
+            <Link href="/browse">
+              <Button variant="primary" size="md">
+                Browse markets →
+              </Button>
+            </Link>
+          </div>
+        </aside>
       </section>
     </div>
   );

@@ -1,11 +1,31 @@
 'use client';
 
+import { Badge } from '@/components/common/Badge';
+import { Button } from '@/components/common/Button';
+import { Eyebrow } from '@/components/common/Eyebrow';
 import { LearningLink } from '@/components/common/LearningLink';
-import { RiskPill } from '@/components/common/RiskPill';
 import {
   selectActiveWarnings,
   useSimulatorStore,
 } from '@/store/simulatorStore';
+import type { RiskWarning } from '@/types/portfolio';
+
+const SEVERITY_TONE: Record<
+  RiskWarning['severity'],
+  'info' | 'warning' | 'danger' | 'neutral'
+> = {
+  INFO: 'info',
+  LOW: 'neutral',
+  MEDIUM: 'warning',
+  HIGH: 'danger',
+};
+
+const SEVERITY_RULE: Record<RiskWarning['severity'], string> = {
+  INFO: 'border-l-[var(--color-info)]',
+  LOW: 'border-l-[var(--color-text-muted)]',
+  MEDIUM: 'border-l-[var(--color-warning)]',
+  HIGH: 'border-l-[var(--color-danger)]',
+};
 
 export function LatestWarningCard() {
   const warnings = useSimulatorStore(selectActiveWarnings);
@@ -13,10 +33,11 @@ export function LatestWarningCard() {
 
   if (warnings.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <h2 className="text-base font-semibold">Latest Warning / Tip</h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          No active warnings. Your portfolio looks healthy.
+      <div>
+        <Eyebrow>Risk monitor</Eyebrow>
+        <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+          No active warnings. The portfolio is within healthy concentration,
+          sector, and trade-frequency thresholds.
         </p>
       </div>
     );
@@ -25,16 +46,20 @@ export function LatestWarningCard() {
   const w = warnings[0];
 
   return (
-    <div className="rounded-xl border border-warning/30 bg-warning/5 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Latest Warning</h2>
-        <RiskPill severity={w.severity}>{w.severity}</RiskPill>
+    <div className={`border-l-2 pl-5 ${SEVERITY_RULE[w.severity]}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <Eyebrow>Latest warning</Eyebrow>
+        <Badge tone={SEVERITY_TONE[w.severity]} variant="text">
+          {w.severity}
+        </Badge>
       </div>
-      <h3 className="mt-2 font-semibold text-text-primary">{w.title}</h3>
-      <p className="mt-1 text-sm text-text-secondary">{w.message}</p>
+      <h3 className="font-display mt-2 text-xl text-ink">{w.title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+        {w.message}
+      </p>
       {w.relatedLearningSlugs && w.relatedLearningSlugs.length > 0 ? (
-        <p className="mt-2 text-xs">
-          Learn:{' '}
+        <p className="mt-3 text-xs text-text-muted">
+          Read:{' '}
           {w.relatedLearningSlugs.map((slug, i) => (
             <span key={slug}>
               {i > 0 ? ' · ' : ''}
@@ -43,13 +68,20 @@ export function LatestWarningCard() {
           ))}
         </p>
       ) : null}
-      <button
-        type="button"
-        onClick={() => acknowledge(w.id)}
-        className="mt-3 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-muted"
-      >
-        Acknowledge
-      </button>
+      <div className="mt-4">
+        <Button
+          size="xs"
+          variant="secondary"
+          onClick={() => acknowledge(w.id)}
+        >
+          Acknowledge
+        </Button>
+      </div>
+      {warnings.length > 1 ? (
+        <p className="mt-3 text-xs text-text-muted">
+          {warnings.length - 1} more {warnings.length === 2 ? 'warning' : 'warnings'} active
+        </p>
+      ) : null}
     </div>
   );
 }

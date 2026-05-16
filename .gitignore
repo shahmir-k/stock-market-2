@@ -15,6 +15,7 @@
 /.playwright-mcp
 /test-results
 /playwright-report
+/rework-*.png
 
 # next.js
 /.next/
