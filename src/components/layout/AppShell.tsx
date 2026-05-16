@@ -19,14 +19,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [isHydrated, loadState]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div className="flex min-h-[100dvh] w-full flex-col">
       <Header />
-      <div className="flex flex-1">
+      <div className="mx-auto flex w-full max-w-(--container-page) flex-1">
         <SidebarNav />
-        <main className="flex-1 px-4 pb-24 pt-6 md:px-6 md:pb-6">
-          <div className="mx-auto w-full max-w-(--container-page)">
-            {children}
-          </div>
+        <main className="flex-1 pb-32 pt-8 md:pb-12 md:pt-10 px-6 md:px-10">
+          {children}
         </main>
       </div>
       <BottomNav />

@@ -3,6 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
+import { Button } from '@/components/common/Button';
+import { Eyebrow } from '@/components/common/Eyebrow';
+import { Field } from '@/components/common/Field';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type Mode = 'signin' | 'signup';
@@ -56,99 +59,91 @@ export function AuthForm() {
 
   if (needsConfirm) {
     return (
-      <div className="space-y-2 rounded-lg border border-info/30 bg-info/5 p-4 text-sm">
-        <h2 className="font-semibold text-text-primary">Check your email</h2>
-        <p className="text-text-secondary">
-          We sent a confirmation link to {email}. Click it to finish creating
-          your account.
+      <div className="space-y-3">
+        <Eyebrow>Almost there</Eyebrow>
+        <h2 className="font-display text-2xl text-ink">Check your email.</h2>
+        <p className="text-sm leading-relaxed text-text-secondary">
+          We sent a confirmation link to{' '}
+          <span className="tabular text-ink">{email}</span>. Click the link to
+          finish creating your account.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="flex gap-2">
+    <form onSubmit={onSubmit} className="space-y-6">
+      {/* Mode toggle — text-link style, underline-active */}
+      <div className="flex items-baseline gap-6 border-b rule pb-3">
         <button
           type="button"
           onClick={() => setMode('signin')}
-          className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+          className={`relative -mb-px text-sm font-medium transition-colors duration-[var(--dur-fast)] ${
             mode === 'signin'
-              ? 'border-accent bg-accent/10 text-accent'
-              : 'border-border text-text-secondary hover:bg-surface-muted'
+              ? 'text-ink'
+              : 'text-text-muted hover:text-text-secondary'
           }`}
         >
           Sign in
+          <span
+            className={`absolute -bottom-3 left-0 right-0 h-[2px] bg-[var(--color-accent)] origin-left transition-transform duration-[var(--dur-base)] ease-[var(--ease-out-expo)] ${
+              mode === 'signin' ? 'scale-x-100' : 'scale-x-0'
+            }`}
+          />
         </button>
         <button
           type="button"
           onClick={() => setMode('signup')}
-          className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+          className={`relative -mb-px text-sm font-medium transition-colors duration-[var(--dur-fast)] ${
             mode === 'signup'
-              ? 'border-accent bg-accent/10 text-accent'
-              : 'border-border text-text-secondary hover:bg-surface-muted'
+              ? 'text-ink'
+              : 'text-text-muted hover:text-text-secondary'
           }`}
         >
-          Sign up
+          Create account
+          <span
+            className={`absolute -bottom-3 left-0 right-0 h-[2px] bg-[var(--color-accent)] origin-left transition-transform duration-[var(--dur-base)] ease-[var(--ease-out-expo)] ${
+              mode === 'signup' ? 'scale-x-100' : 'scale-x-0'
+            }`}
+          />
         </button>
       </div>
 
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-text-primary"
-        >
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-          className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
-        />
-      </div>
+      <Field
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        autoComplete="email"
+      />
 
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-text-primary"
-        >
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-          className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
-        />
-      </div>
+      <Field
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        minLength={6}
+        autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+        helper={mode === 'signup' ? 'At least 6 characters.' : undefined}
+      />
 
       {error ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
           {error}
         </p>
       ) : null}
 
-      <button
+      <Button
         type="submit"
-        disabled={submitting}
-        className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+        variant="primary"
+        size="lg"
+        loading={submitting}
+        className="w-full"
       >
-        {submitting
-          ? mode === 'signup'
-            ? 'Creating account…'
-            : 'Signing in…'
-          : mode === 'signup'
-            ? 'Create account'
-            : 'Sign in'}
-      </button>
+        {mode === 'signup' ? 'Create account' : 'Sign in'}
+      </Button>
     </form>
   );
 }
