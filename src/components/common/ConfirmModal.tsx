@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 
+import { Button } from './Button';
+import { Eyebrow } from './Eyebrow';
+
 export function ConfirmModal({
   open,
   title,
@@ -28,44 +31,40 @@ export function ConfirmModal({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
+    if (open && !dialog.open) dialog.showModal();
+    else if (!open && dialog.open) dialog.close();
   }, [open]);
-
-  const confirmClass = destructive
-    ? 'bg-danger text-white hover:bg-danger/90'
-    : 'bg-accent text-white hover:bg-accent-hover';
 
   return (
     <dialog
       ref={dialogRef}
       onClose={onCancel}
-      className="rounded-2xl border border-border bg-surface p-0 shadow-xl backdrop:bg-slate-900/40"
+      className="fade-up rounded-[var(--radius-modal)] border rule bg-surface p-0 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.12)] backdrop:bg-ink/30"
     >
-      <div className="w-[28rem] max-w-[calc(100vw-2rem)] p-6">
-        <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+      <div className="w-[28rem] max-w-[calc(100vw-2rem)] p-8">
+        <Eyebrow>{destructive ? 'Confirm action' : 'Confirm'}</Eyebrow>
+        <h2 className="font-display mt-2 text-2xl text-ink">{title}</h2>
         {description ? (
-          <p className="mt-2 text-sm text-text-secondary">{description}</p>
+          <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+            {description}
+          </p>
         ) : null}
         {children ? <div className="mt-4">{children}</div> : null}
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-muted"
-          >
+        <div className="mt-8 flex justify-end gap-2 border-t rule pt-5">
+          <Button variant="secondary" onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
             onClick={onConfirm}
-            className={`rounded-lg px-4 py-2 text-sm font-medium ${confirmClass}`}
+            className={
+              destructive
+                ? 'bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/85'
+                : ''
+            }
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </dialog>
