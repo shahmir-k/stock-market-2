@@ -1,19 +1,23 @@
 import Link from 'next/link';
 
+import { Eyebrow } from '@/components/common/Eyebrow';
 import { LEARNING_CATEGORY_LABELS, getRelatedTerms } from '@/lib/learning';
 import type { LearningTerm } from '@/types/learning';
 
+// Editorial article layout — max-width prose, generous leading, serif
+// headings. Used standalone on /learn/[slug] and inside LearningDrawer.
 export function LearningTermDetail({ term }: { term: LearningTerm }) {
   const related = getRelatedTerms(term);
   return (
-    <article className="space-y-6">
+    <article className="space-y-8">
       <header>
-        <div className="text-xs font-medium uppercase tracking-wide text-text-muted">
-          {LEARNING_CATEGORY_LABELS[term.category]}
-        </div>
-        <h1 className="mt-1 text-3xl font-bold text-text-primary">
+        <Eyebrow>{LEARNING_CATEGORY_LABELS[term.category]}</Eyebrow>
+        <h1 className="font-display mt-3 text-4xl tracking-tight text-ink md:text-5xl">
           {term.title}
         </h1>
+        <p className="mt-3 max-w-prose text-base leading-relaxed text-text-secondary">
+          {term.shortDefinition}
+        </p>
       </header>
 
       <Section title="Simple definition">{term.simpleDefinition}</Section>
@@ -22,16 +26,14 @@ export function LearningTermDetail({ term }: { term: LearningTerm }) {
       <Section title="Example">{term.example}</Section>
 
       {related.length > 0 ? (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
-            Related Terms
-          </h2>
-          <div className="mt-2 flex flex-wrap gap-2">
+        <section className="border-t rule pt-6">
+          <Eyebrow>Related terms</Eyebrow>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
             {related.map((r) => (
               <Link
                 key={r.slug}
                 href={`/learn/${r.slug}`}
-                className="rounded-full bg-surface-muted px-3 py-1 text-sm text-text-primary hover:bg-accent/10 hover:text-accent"
+                className="text-[var(--color-accent)] underline-offset-4 hover:underline"
               >
                 {r.title}
               </Link>
@@ -51,13 +53,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
-        {title}
-      </h2>
-      <p className="mt-2 text-base leading-relaxed text-text-primary">
-        {children}
-      </p>
+    <section className="max-w-prose">
+      <Eyebrow>{title}</Eyebrow>
+      <p className="mt-3 text-base leading-relaxed text-ink">{children}</p>
     </section>
   );
 }

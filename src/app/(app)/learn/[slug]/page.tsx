@@ -15,12 +15,12 @@ export default async function TermDetailPage({
     notFound();
   }
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-10">
       <Link
         href="/learn"
-        className="text-sm text-text-secondary hover:text-text-primary"
+        className="text-sm text-text-secondary hover:text-ink transition-colors duration-[var(--dur-fast)]"
       >
-        ← Back to Learn
+        ← Back to glossary
       </Link>
       <LearningTermDetail term={term} />
     </div>

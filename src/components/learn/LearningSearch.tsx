@@ -8,13 +8,15 @@ export function LearningSearch({
   onChange: (next: string) => void;
 }) {
   return (
-    <input
-      type="search"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Search terms…"
-      aria-label="Search terms"
-      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
-    />
+    <div className="border-b rule pb-3">
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search the glossary"
+        aria-label="Search terms"
+        className="w-full bg-transparent text-lg outline-none placeholder:text-text-muted md:text-2xl"
+      />
+    </div>
   );
 }

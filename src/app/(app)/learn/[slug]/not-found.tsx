@@ -1,28 +1,34 @@
 import Link from 'next/link';
 
-import { EmptyState } from '@/components/common/EmptyState';
+import { Button } from '@/components/common/Button';
+import { Eyebrow } from '@/components/common/Eyebrow';
 
 export default function LearnNotFound() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-8">
       <Link
         href="/learn"
-        className="text-sm text-text-secondary hover:text-text-primary"
+        className="text-sm text-text-secondary hover:text-ink transition-colors duration-[var(--dur-fast)]"
       >
-        ← Back to Learn
+        ← Back to glossary
       </Link>
-      <EmptyState
-        title="Term not found"
-        message="That learning term doesn't exist. Browse all terms or use the search on the Learn page."
-        action={
-          <Link
-            href="/learn"
-            className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-          >
-            Browse all terms
+      <div>
+        <Eyebrow>Not found</Eyebrow>
+        <h1 className="font-display mt-3 text-4xl tracking-tight text-ink">
+          That term doesn&apos;t exist.
+        </h1>
+        <p className="mt-3 max-w-prose text-base leading-relaxed text-text-secondary">
+          The URL may be mistyped or the term may have been removed. Browse the
+          full 30-term glossary to find what you&apos;re looking for.
+        </p>
+        <div className="mt-6">
+          <Link href="/learn">
+            <Button variant="primary" size="md">
+              Browse the glossary →
+            </Button>
           </Link>
-        }
-      />
+        </div>
+      </div>
     </div>
   );
 }
