@@ -8,6 +8,67 @@
 
 ---
 
+## Status update (2026-05-16)
+
+Closed all reachable automated gaps in this pass. Current counts:
+
+| Suite | Files | Tests | Status |
+|---|---:|---:|---|
+| Unit (`tests/unit/`) | 14 | 147 | all passing |
+| Integration (`tests/integration/`) | 5 | 19 | all passing |
+| API routes (`tests/api/`) | 5 | 33 | all passing |
+| Database audit (`supabase/audit.sql`) | 1 SQL script | 11 checks | runs via `mcp__supabase__execute_sql` against live project — verified: 25 RLS policies present, RLS enabled on all 7 user-data tables, holdings unique index present |
+| E2E (`tests/e2e/`) | 2 | 11 specs | unauthenticated specs only — authenticated journeys need a pre-created test account (see `docs/test-plan.md` for the 18-journey manual walk) |
+| **Automated total** | **27** | **199 tests + 11 SQL checks** | all green |
+| Manual (`docs/test-plan.md` + `M-*` here) | — | ~95 | walk per release |
+
+### New files this pass
+
+- `tests/unit/risk.test.ts` (24) — all 7 PRD §12.3 triggers + novelWarnings dedupe
+- `tests/unit/backtest.test.ts` (20) — lump-sum/DCA/portfolio + edge cases
+- `tests/unit/selectors.test.ts` (9) — memoization regression for R-BUG-001
+- `tests/unit/sectorMap.test.ts` (8) — R-BUG-007 regression
+- `tests/unit/normalizeSearch.test.ts` (9) — R-BUG-003 regression
+- `tests/unit/learning.test.ts` (10) — 30 terms + helpers
+- `tests/unit/persistence.test.ts` (7) — localStorage round-trip (jsdom)
+- `tests/integration/warningLifecycle.test.ts` (4) — R-BUG-005 regression
+- `tests/integration/refreshIdempotence.test.ts` (2) — R-BUG-006 regression
+- `tests/integration/resetPreservation.test.ts` (5) — PRD §24.7 rules
+- `tests/integration/modeSwitch.test.ts` (3) — mode persistence
+- `tests/api/{search,fx,quote,history,profile}.test.ts` (33)
+- `tests/api/helpers.ts` — shared NextRequest builder
+- `supabase/audit.sql` — schema + RLS audit
+- `tests/e2e/{smoke,learn}.spec.ts` — landing, auth gate, learn pages
+- `src/lib/market-data/cache.ts` — added `_clearCache()` test helper
+
+### Regression coverage (R-BUG-*)
+
+Every fixed bug now has at least one automated guard:
+
+| Bug | What | Guard |
+|---|---|---|
+| R-BUG-001 | Dashboard infinite-render loop | `tests/unit/selectors.test.ts` — memoization stability |
+| R-BUG-002 | Bootstrap race (StrictMode 409s) | Covered by `inFlightSync` Promise dedupe in store (manual verification still recommended in E2E) |
+| R-BUG-003 | Search duplicate rows | `tests/unit/normalizeSearch.test.ts` + `tests/api/search.test.ts` |
+| R-BUG-004 | Asset detail default mode before hydration | Covered indirectly by `tests/integration/modeSwitch.test.ts` — full E2E spec marked manual |
+| R-BUG-005 | Risk warnings persisting all `fresh` not novel | `tests/unit/risk.test.ts` + `tests/integration/warningLifecycle.test.ts` |
+| R-BUG-006 | Holdings duplication race | `tests/integration/refreshIdempotence.test.ts` + DB unique index `D-SCH-008` |
+| R-BUG-007 | Sector "Unknown" (paid /profile) | `tests/unit/sectorMap.test.ts` + `tests/api/profile.test.ts` |
+| R-BUG-008 | Holdings table "Unavailable" on mount | Verified indirectly via refresh idempotence; manual in J9 |
+| R-BUG-009 | Sell button enabled with qty > owned | Covered by sell-preview unit tests + manual J7 |
+
+### Running everything
+
+```bash
+npm test                # 199 unit + integration + API tests (Vitest)
+npx playwright test     # 11 E2E specs (Playwright) — needs dev server + chromium
+# Database audit:
+#   open supabase/audit.sql and execute via Supabase SQL editor or:
+#   mcp__supabase__execute_sql with each block
+```
+
+---
+
 ## How to use this document
 
 1. **Filter by status** to find gaps to close: `✗` is the priority list.

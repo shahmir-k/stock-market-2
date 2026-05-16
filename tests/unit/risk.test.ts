@@ -48,6 +48,7 @@ function portfolio(overrides: Partial<Portfolio> = {}): Portfolio {
 
 function buyPreview(overrides: Partial<TradePreview> = {}): TradePreview {
   return {
+    id: `prev-${Math.random()}`,
     type: 'BUY',
     symbol: 'AAPL',
     assetName: 'Apple Inc.',

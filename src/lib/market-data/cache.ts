@@ -26,6 +26,12 @@ export function setCached<T>(key: string, value: T, ttlMs: number): void {
   store.set(key, { value, expiresAt: Date.now() + ttlMs });
 }
 
+// Test-only — wipe the module-level cache so tests don't leak through it.
+// Safe to ship; nothing in production calls this.
+export function _clearCache(): void {
+  store.clear();
+}
+
 // PRD §14.5 cache durations.
 export const CACHE_TTL = {
   QUOTE_MS: 2 * 60 * 1000,

@@ -103,6 +103,7 @@ function makeState(
       allowOptions: false,
       allowMargin: false,
       allowShortSelling: false,
+      feesEnabled: false,
     },
     portfolio: portfolio(portfolioOverrides),
     warnings,

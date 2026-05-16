@@ -26,6 +26,7 @@ function validState(): PersistedState {
       allowOptions: false,
       allowMargin: false,
       allowShortSelling: false,
+      feesEnabled: false,
     },
     portfolio: {
       cashCad: 5000,
