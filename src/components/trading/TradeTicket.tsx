@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { Button } from '@/components/common/Button';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
 import { TradeValidationError } from '@/lib/trading/errors';
 import { useSimulatorStore } from '@/store/simulatorStore';
@@ -89,44 +90,54 @@ export function TradeTicket({
     }
   };
 
+  const sellOverOwned =
+    mode === 'SELL' && holding && qtyNum > holding.quantity;
+
   return (
     <>
-      <div className="mt-3 flex gap-2">
+      {/* Mode toggle — underline-active text buttons */}
+      <div className="flex items-baseline gap-5 border-b rule pb-2">
         {(['BUY', 'SELL'] as const).map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+            className={`relative -mb-px py-1 text-sm font-medium transition-colors duration-[var(--dur-fast)] ${
               mode === m
-                ? m === 'BUY'
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-warning bg-warning/10 text-warning'
-                : 'border-border text-text-secondary hover:bg-surface-muted'
+                ? 'text-ink'
+                : 'text-text-muted hover:text-text-secondary'
             }`}
           >
             {m === 'BUY' ? 'Buy' : 'Sell'}
+            <span
+              className={`absolute -bottom-[9px] left-0 right-0 h-[2px] origin-left bg-[var(--color-accent)] transition-transform duration-[var(--dur-base)] ease-[var(--ease-out-expo)] ${
+                mode === m ? 'scale-x-100' : 'scale-x-0'
+              }`}
+            />
           </button>
         ))}
       </div>
 
       {mode === 'SELL' && holding ? (
-        <p className="mt-3 text-sm text-text-secondary">
-          Owned: <span className="tabular font-medium">{holding.quantity}</span>{' '}
-          shares · Avg cost{' '}
-          <CurrencyValue value={holding.averageCostCad} />
+        <p className="mt-4 text-xs text-text-muted">
+          Owned <span className="tabular text-ink">{holding.quantity}</span>{' '}
+          shares · Average cost{' '}
+          <span className="tabular text-ink">
+            <CurrencyValue value={holding.averageCostCad} />
+          </span>
         </p>
       ) : null}
       {mode === 'SELL' && !holding ? (
-        <p className="mt-3 text-sm text-text-secondary">
-          You do not own this asset.
+        <p className="mt-4 text-xs text-text-muted">
+          You don&apos;t own this asset yet.
         </p>
       ) : null}
 
-      <div className="mt-3">
+      {/* Quantity input — hairline underline, no boxed border */}
+      <div className="mt-6">
         <label
           htmlFor="qty"
-          className="block text-sm font-medium text-text-primary"
+          className="eyebrow"
         >
           Quantity
         </label>
@@ -137,25 +148,25 @@ export function TradeTicket({
           min="0"
           value={qty}
           onChange={(e) => setQty(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
-          placeholder="e.g., 1.25"
+          placeholder="0"
+          className="mt-2 w-full bg-transparent border-b rule pb-1 font-display tabular text-3xl text-ink outline-none transition-colors duration-[var(--dur-fast)] focus:border-[var(--color-accent)]"
         />
       </div>
 
-      <dl className="mt-4 space-y-1 text-sm">
+      <dl className="mt-6 space-y-2.5 text-sm">
         <div className="flex justify-between">
           <dt className="text-text-secondary">Estimated total</dt>
-          <dd className="tabular font-medium">
+          <dd className="tabular text-ink">
             {estimatedTotalCad !== null ? (
               <CurrencyValue value={estimatedTotalCad} />
             ) : (
-              '—'
+              <span className="text-text-muted">—</span>
             )}
           </dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-text-secondary">Cash after trade</dt>
-          <dd className="tabular">
+          <dt className="text-text-secondary">Cash after</dt>
+          <dd className="tabular text-text-secondary">
             {estimatedTotalCad !== null ? (
               <CurrencyValue
                 value={
@@ -165,42 +176,38 @@ export function TradeTicket({
                 }
               />
             ) : (
-              '—'
+              <span className="text-text-muted">—</span>
             )}
           </dd>
         </div>
       </dl>
 
       {validationErr ? (
-        <p role="alert" className="mt-2 text-sm text-danger">
+        <p role="alert" className="mt-3 text-sm text-[var(--color-danger)]">
           {validationErr}
         </p>
-      ) : mode === 'SELL' && holding && qtyNum > holding.quantity ? (
-        <p role="alert" className="mt-2 text-sm text-danger">
-          You cannot sell more shares than you own ({holding.quantity}).
+      ) : sellOverOwned ? (
+        <p role="alert" className="mt-3 text-sm text-[var(--color-danger)]">
+          You can&apos;t sell more shares than you own ({holding!.quantity}).
         </p>
       ) : null}
 
-      <button
+      <Button
         type="button"
+        variant="primary"
+        size="lg"
+        className="mt-6 w-full"
         onClick={() => {
           void onPreview();
         }}
         disabled={
           !Number.isFinite(qtyNum) ||
           qtyNum <= 0 ||
-          // Pre-validate sells: must own the asset and not exceed qty.
-          (mode === 'SELL' &&
-            (!holding || qtyNum > holding.quantity))
+          (mode === 'SELL' && (!holding || qtyNum > holding.quantity))
         }
-        className={`mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 ${
-          mode === 'BUY'
-            ? 'bg-accent hover:bg-accent-hover'
-            : 'bg-warning hover:bg-warning/90'
-        }`}
       >
-        Preview {mode === 'BUY' ? 'Buy' : 'Sell'}
-      </button>
+        Preview {mode === 'BUY' ? 'Buy' : 'Sell'} →
+      </Button>
 
       <TradeConfirmationModal
         open={confirmOpen}

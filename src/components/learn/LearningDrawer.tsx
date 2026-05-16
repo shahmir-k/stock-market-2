@@ -9,8 +9,10 @@ import {
   useState,
 } from 'react';
 
-import { LearningTermDetail } from './LearningTermDetail';
+import { Eyebrow } from '@/components/common/Eyebrow';
 import { getTermBySlug } from '@/lib/learning';
+
+import { LearningTermDetail } from './LearningTermDetail';
 
 // When this context is non-null, in-page learning links route through the
 // drawer instead of navigating. Used inside trade modals so the trade input
@@ -56,27 +58,24 @@ export function LearningDrawerProvider({
       <dialog
         ref={dialogRef}
         onClose={closeDrawer}
-        // Position as a right-side panel via the dialog's default
-        // positioning + margin override. The :modal pseudo-class centers
-        // the dialog by default; we explicitly stick it to the right.
-        className="fixed right-0 top-0 ml-auto mr-0 h-screen max-h-screen w-[28rem] max-w-[calc(100vw-2rem)] rounded-none border-l border-border bg-surface p-0 shadow-2xl backdrop:bg-slate-900/40"
+        // Right-side editorial sheet. Thin left rule, bone background, no
+        // bezel — feels like the drawer slid out from the side of a magazine.
+        className="fixed right-0 top-0 ml-auto mr-0 h-screen max-h-screen w-[32rem] max-w-[calc(100vw-2rem)] rounded-none border-l rule bg-canvas p-0 shadow-[-30px_0_80px_-20px_rgba(0,0,0,0.12)] backdrop:bg-ink/30"
         aria-label="Learning term"
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
-              Learn
-            </h2>
+          <header className="flex items-baseline justify-between border-b rule px-8 py-5">
+            <Eyebrow>Learn</Eyebrow>
             <button
               type="button"
               onClick={closeDrawer}
               aria-label="Close"
-              className="rounded-md p-1 text-text-secondary hover:bg-surface-muted hover:text-text-primary"
+              className="text-sm text-text-secondary hover:text-ink transition-colors duration-[var(--dur-fast)]"
             >
-              ✕
+              Close
             </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4">
+          </header>
+          <div className="flex-1 overflow-y-auto px-8 py-8">
             {term ? (
               <LearningTermDetail term={term} />
             ) : (
