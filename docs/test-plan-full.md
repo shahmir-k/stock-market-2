@@ -67,6 +67,17 @@ npx playwright test     # 11 E2E specs (Playwright) — needs dev server + chrom
 #   mcp__supabase__execute_sql with each block
 ```
 
+### Playwright MCP walkthrough — 2026-05-16
+
+Live in-browser walk of every browser-reachable case (E-/M-/X-/R-). Results in `docs/test-walk-results.md`.
+Headline: **74 ✓ / 6 ⚠ / 8 ⊘ / 0 ✗** across 88 walked cases.
+
+Bugs discovered:
+- **Fixed in walk**: `Field.tsx` used `Math.random()` for input IDs → hydration mismatch on every form-bearing page (login, signup, trade modals). Replaced with `useId()`.
+- **Open**: B-PORT-001 — `/portfolio` flashes default state ($5,000 cash / 0 holdings) for ~2-3s before hydrating. Header pill correct throughout. Fix is to gate page on `isHydrated` and show a skeleton, or use SSR initial state.
+
+All R-BUG-001..009 regressions verified ✓ visually (no recurrences). All R-BUG-006 belt-and-braces still in place: UNIQUE index, UPSERT, inflight dedupe — repeated rapid mounts produce no duplicates.
+
 ---
 
 ## How to use this document

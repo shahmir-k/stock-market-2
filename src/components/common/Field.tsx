@@ -1,7 +1,7 @@
 // Form input with label-above, hairline underline (no boxed border),
 // optional helper text and error. Replaces the previous boxed-input pattern.
 
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 
 type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -13,7 +13,8 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(
   { label, helper, error, className = '', id, ...rest },
   ref,
 ) {
-  const inputId = id ?? `f-${rest.name ?? Math.random().toString(36).slice(2, 8)}`;
+  const generated = useId();
+  const inputId = id ?? `f-${rest.name ?? generated}`;
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor={inputId} className="text-sm font-medium text-ink">
