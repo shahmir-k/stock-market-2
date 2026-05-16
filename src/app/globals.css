@@ -1,26 +1,52 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Light mode only — PRD §24.11. */
+
+@theme {
+  /* Surface */
+  --color-app-bg: var(--color-slate-50);
+  --color-surface: #ffffff;
+  --color-surface-muted: var(--color-slate-100);
+  --color-border: var(--color-slate-200);
+
+  /* Text */
+  --color-text-primary: var(--color-slate-900);
+  --color-text-secondary: var(--color-slate-600);
+  --color-text-muted: var(--color-slate-500);
+
+  /* Semantic — paired with labels/numbers, never used alone (PRD §17.3). */
+  --color-accent: var(--color-blue-600);
+  --color-accent-hover: var(--color-blue-700);
+  --color-success: var(--color-green-600);
+  --color-danger: var(--color-red-600);
+  --color-warning: var(--color-amber-500);
+  --color-info: var(--color-sky-600);
+
+  /* Layout (PRD §32.2) */
+  --container-page: 1280px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-app-bg);
+  color: var(--color-text-primary);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-app-bg);
+  color: var(--color-text-primary);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
+
+/* Tabular numerals everywhere financial numbers are displayed. */
+.num,
+.tabular {
+  font-variant-numeric: tabular-nums;
 }

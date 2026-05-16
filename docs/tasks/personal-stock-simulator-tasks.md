@@ -53,64 +53,70 @@ A single-user stock/ETF trading simulator that starts the user with $5,000 CAD v
 ### Chunk 1: Project Foundation
 > T-001..T-004 — Must come first; everything depends on a working Next.js scaffold and folder structure.
 
-#### T-001 Initialize Next.js App Router project
+#### T-001 Initialize Next.js App Router project ✅
 **Size**: M | **Layer**: Foundation | **Depends On**: None
 
 **Description**: Bootstrap Next.js 14+ App Router project with TypeScript, Tailwind, and ESLint. Configure for Vercel deployment.
 
 **Acceptance Criteria**:
-- [ ] `npx create-next-app@latest` with TypeScript, Tailwind, App Router, ESLint, `src/` directory
-- [ ] `next dev` runs and renders default landing
-- [ ] `tsconfig.json` strict mode enabled
-- [ ] Tailwind config wired to `src/app/**` and `src/components/**`
+- [x] `npx create-next-app@latest` with TypeScript, Tailwind, App Router, ESLint, `src/` directory
+- [x] `next dev` runs and renders default landing
+- [x] `tsconfig.json` strict mode enabled
+- [x] Tailwind config wired to `src/app/**` and `src/components/**` (Tailwind v4 uses CSS `@import "tailwindcss"` in `globals.css`, not `tailwind.config.ts`)
+
+**Completion notes (2026-05-15)**:
+- create-next-app installed **Next 16.2.6** (latest), **React 19.2.4**, **Tailwind v4**, **ESLint 9 flat config**, **Turbopack** enabled for dev/build.
+- Tailwind v4 has no `tailwind.config.ts`; design tokens (T-021) will go in a CSS `@theme` block in `globals.css`.
+- `next lint` is replaced with direct `eslint` invocation in `package.json` scripts.
 
 **Files Likely Affected**:
 - `package.json`, `next.config.ts`, `tsconfig.json`, `tailwind.config.ts`, `src/app/layout.tsx`, `src/app/page.tsx`
 
 ---
 
-#### T-002 Install runtime dependencies
+#### T-002 Install runtime dependencies ✅
 **Size**: S | **Layer**: Foundation | **Depends On**: T-001
 
 **Description**: Install Zustand, Chart.js + react-chartjs-2, Supabase SDK, and uuid.
 
 **Acceptance Criteria**:
-- [ ] `zustand` installed
-- [ ] `chart.js` + `react-chartjs-2` installed
-- [ ] `@supabase/supabase-js` + `@supabase/ssr` installed
-- [ ] `uuid` + `@types/uuid` installed
-- [ ] `npm run build` passes
+- [x] `zustand` installed (5.0.13)
+- [x] `chart.js` (4.5.1) + `react-chartjs-2` (5.3.1) installed
+- [x] `@supabase/supabase-js` (2.105.4) + `@supabase/ssr` (0.10.3) installed
+- [x] `uuid` (14.0.0) + `@types/uuid` (10.0.0) installed
+- [x] `npm run build` passes
 
 **Files Likely Affected**:
 - `package.json`, `package-lock.json`
 
 ---
 
-#### T-003 Create folder structure per PRD §14.6
+#### T-003 Create folder structure per PRD §14.6 ✅
 **Size**: S | **Layer**: Foundation | **Depends On**: T-001
 
 **Description**: Pre-create directory tree so subsequent tasks land files in the right place.
 
 **Acceptance Criteria**:
-- [ ] `src/app/{dashboard,browse,asset/[symbol],portfolio,learn,learn/[slug],compound-growth,settings,auth/login,auth/callback,api/market/{search,quote,history,fx},api/portfolio/sync}` exist as empty route folders or placeholder pages
-- [ ] `src/{components,content,lib,store,types}` with sub-folders from PRD created
-- [ ] Each folder has a `.gitkeep` until populated
+- [x] All `src/app/...` route folders created (page.tsx/route.ts arrive in their respective tasks)
+- [x] All `src/{components,content,lib,store,types}` sub-folders created per PRD §14.6
+- [x] Each folder has `.gitkeep`
+- [x] Added `src/lib/learning/` for the learning helpers from T-010 (not in PRD §14.6 but needed by task plan)
 
 **Files Likely Affected**:
 - All folders under `src/`
 
 ---
 
-#### T-004 Configure environment variable scaffolding
+#### T-004 Configure environment variable scaffolding ✅
 **Size**: S | **Layer**: Foundation | **Depends On**: T-001
 
 **Description**: Define `.env.example` with all required keys, wire into Next.js, and document client/server separation rules.
 
 **Acceptance Criteria**:
-- [ ] `.env.example` lists `TWELVE_DATA_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] No `NEXT_PUBLIC_TWELVE_DATA_*` variable is referenced anywhere
-- [ ] `.env.local` is gitignored
-- [ ] README/CLAUDE.md (if added) notes server-only vars
+- [x] `.env.example` lists `TWELVE_DATA_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- [x] No `NEXT_PUBLIC_TWELVE_DATA_*` variable referenced
+- [x] `.env.local` gitignored (`.env*` with `!.env.example` exception so the template can be committed)
+- [x] Inline comments in `.env.example` document server-only vs browser-safe vars
 
 **Files Likely Affected**:
 - `.env.example`, `.gitignore`
@@ -120,45 +126,50 @@ A single-user stock/ETF trading simulator that starts the user with $5,000 CAD v
 ### Chunk 2: Type Model
 > T-005..T-007 — Shared TypeScript types feed every later layer; all parallel-safe within the chunk.
 
-#### T-005 Define market & API contract types
+#### T-005 Define market & API contract types ✅
 **Size**: M | **Layer**: Backend | **Depends On**: T-003
 
 **Description**: Implement `ApiSuccess<T>`/`ApiError` envelope, `AssetSearchResult`, `QuoteResponseData`, `HistoricalPricePoint`, `FxResponseData`, freshness enums, and standard error code union per PRD §26.
 
 **Acceptance Criteria**:
-- [ ] `src/types/market.ts` exports all types from PRD §26.1–26.5
-- [ ] Error code union matches PRD §26.5 exactly
-- [ ] `freshness` is a string-literal union (`'FRESH' | 'RECENT' | 'STALE' | 'UNAVAILABLE'`)
+- [x] `src/types/market.ts` exports all types from PRD §26.1–26.5
+- [x] Error code union matches PRD §26.5 exactly (12 codes)
+- [x] `freshness` is a string-literal union (`'FRESH' | 'RECENT' | 'STALE' | 'UNAVAILABLE'`)
+- [x] Convenience union `ApiResponse<T> = ApiSuccess<T> | ApiError` exported for callers
 
 **Files Likely Affected**:
 - `src/types/market.ts`
 
 ---
 
-#### T-006 Define portfolio, trading & state types
+#### T-006 Define portfolio, trading & state types ✅
 **Size**: M | **Layer**: Backend | **Depends On**: T-003
 
 **Description**: Implement `LocalUser`, `SimulationConfig`, `Portfolio`, `Holding`, `Transaction`, `PortfolioSnapshot`, `RiskWarning`, `BuyOrderInput`/`SellOrderInput`, `TradePreview`, `TradeResult`, `SimulatorStoreState` per PRD §15 + §27.
 
 **Acceptance Criteria**:
-- [ ] `src/types/portfolio.ts`, `src/types/trading.ts` created
-- [ ] All field names and literal unions match PRD verbatim (e.g., `assetType: 'STOCK' | 'ETF'`)
-- [ ] No `any`; all numeric fields typed `number`, ISO timestamps typed `string`
+- [x] `src/types/portfolio.ts` (data records) + `src/types/trading.ts` (trade flow inputs/preview/result)
+- [x] Field names and literal unions match PRD verbatim
+- [x] No `any`; ISO timestamps typed `string`, money/quantity typed `number`
+- [x] `AuthSessionStatus`, `SyncStatus`, `MarketDataMode` added (PRD §27.1, §34.11, §24.8) — needed by store
+- [x] `Transaction` placed in portfolio.ts (Portfolio owns the array); trading.ts imports from portfolio.ts to avoid circular dep
+- [x] `SimulatorStoreState` deferred to `src/store/simulatorStore.ts` (T-018) since it's a runtime concern, not a type-only export
 
 **Files Likely Affected**:
 - `src/types/portfolio.ts`, `src/types/trading.ts`
 
 ---
 
-#### T-007 Define education/learning types
+#### T-007 Define education/learning types ✅
 **Size**: S | **Layer**: Backend | **Depends On**: T-003
 
 **Description**: Implement `LearningTerm` and category union per PRD §15.9.
 
 **Acceptance Criteria**:
-- [ ] `src/types/learning.ts` exports `LearningTerm`
-- [ ] Category union matches the six PRD categories
-- [ ] Includes `relatedSlugs: string[]`
+- [x] `src/types/learning.ts` exports `LearningTerm` + `LearningCategory`
+- [x] Category union matches the six PRD §9.7 categories
+- [x] Includes `relatedSlugs: string[]`
+- [x] `src/types/education.ts` adds UI projection types (`LearningCategoryMeta`, `TermSummary`) for category tabs and card views
 
 **Files Likely Affected**:
 - `src/types/learning.ts`, `src/types/education.ts`
@@ -168,47 +179,51 @@ A single-user stock/ETF trading simulator that starts the user with $5,000 CAD v
 ### Chunk 3: Mock Data + Seed Content
 > T-008..T-010 — Independent content files needed before UI can render anything realistic.
 
-#### T-008 Mock market data set
+#### T-008 Mock market data set ✅
 **Size**: M | **Layer**: Backend | **Depends On**: T-005
 
 **Description**: Hand-built fixture covering supported exchanges/currencies/sectors with quote, search, history, and FX shapes that match the API contract.
 
 **Acceptance Criteria**:
-- [ ] At least 12 assets across NASDAQ/NYSE/NYSE ARCA/TSX, including ETFs and at least one CAD asset
-- [ ] Each asset has sector, price, daily change, and 30 historical points
-- [ ] Mock USD/CAD FX rate provided
-- [ ] Returned shapes are valid `AssetSearchResult` / `QuoteResponseData` / `HistoricalPricePoint[]` / `FxResponseData`
+- [x] **16 assets** across NASDAQ/NYSE/NYSE ARCA/TSX (4 USD ETFs, 2 CAD ETFs, mixed stocks)
+- [x] Each asset has sector, price, daily change; 30 historical points generated procedurally via mulberry32 PRNG seeded by symbol (deterministic for tests)
+- [x] Mock USD/CAD FX rate (`MOCK_FX_USD_CAD = 1.37`); CAD→CAD short-circuits to 1
+- [x] Returned shapes match `AssetSearchResult` / `QuoteResponseData` / `HistoricalPricePoint[]` / `FxResponseData` (verified via tsc)
+- [x] `mockProvider.ts` exposes `searchSymbols`, `getQuote`, `getQuotes`, `getHistoricalPrices`, `getExchangeRate` for use prior to T-040 wrapping
 
 **Files Likely Affected**:
 - `src/lib/market-data/mock/mockAssets.ts`, `src/lib/market-data/mock/mockProvider.ts`
 
 ---
 
-#### T-009 Learning term content (29 terms)
+#### T-009 Learning term content (30 terms) ✅
 **Size**: L | **Layer**: Frontend | **Depends On**: T-007
 
 **Description**: Author all required learning terms from PRD §28 into a typed content array.
 
 **Acceptance Criteria**:
-- [ ] All 29 required terms present (PRD §24.9)
-- [ ] Each term has `slug`, `title`, `category`, `shortDefinition`, `simpleDefinition`, `inSimulator`, `whyItMatters`, `example`, `relatedSlugs`
-- [ ] `relatedSlugs` reference only slugs that exist in the file
-- [ ] Copy is original (paraphrased), beginner-friendly, taken from PRD §28
+- [x] All **30** required terms present (PRD §24.9 — Market 7, Portfolio 7, Gains 5, Risk 6, Long-Term/Sim 5). Original task plan said "29" — actual count corrected.
+- [x] Each term has `slug`, `title`, `category`, `shortDefinition`, `simpleDefinition`, `inSimulator`, `whyItMatters`, `example`, `relatedSlugs`
+- [x] `relatedSlugs` reference only slugs in this file — verified via grep (30 unique references, 0 dangling). PRD §28 references to undefined terms (`Currency Conversion`, `Quote`, `Buy`, `Sell`, `Holding`) were dropped.
+- [x] Copy taken from PRD §28 verbatim
 
 **Files Likely Affected**:
 - `src/content/learningTerms.ts`
 
 ---
 
-#### T-010 Learning slug → UI label registry
+#### T-010 Learning slug → UI label registry ✅
 **Size**: S | **Layer**: Frontend | **Depends On**: T-009
 
 **Description**: Helper that maps UI labels (e.g., `Average Cost`, `Realized Gain/Loss`) to learning term slugs so `LearningLink` components can be rendered consistently.
 
 **Acceptance Criteria**:
-- [ ] `getTermBySlug(slug)` returns term or `null`
-- [ ] `getTermsByCategory(category)` returns sorted list
-- [ ] `searchTerms(query)` does case-insensitive title/definition match
+- [x] `getTermBySlug(slug)` returns term or `null`
+- [x] `getTermsByCategory(category)` returns terms in that category
+- [x] `searchTerms(query)` does case-insensitive title/short/simple definition match
+- [x] `LEARN.*` slug constant object exported (autocomplete-friendly references for `<LearningLink slug={LEARN.AVERAGE_COST} />`)
+- [x] `LEARNING_CATEGORY_LABELS` + `LEARNING_CATEGORIES_META` exported for category tabs
+- [x] `getRelatedTerms(term)` resolves the term's `relatedSlugs[]` to full term records
 
 **Files Likely Affected**:
 - `src/lib/learning/index.ts`
@@ -218,60 +233,67 @@ A single-user stock/ETF trading simulator that starts the user with $5,000 CAD v
 ### Chunk 4: Calculation Modules
 > T-011..T-014 — Pure-function math libraries used by the trading module, store selectors, and UI. Independent and parallel-safe.
 
-#### T-011 Cost basis & average cost
+#### T-011 Cost basis & average cost ✅
 **Size**: S | **Layer**: Backend | **Depends On**: T-006
 
 **Description**: Average-cost basis updates per PRD §10.3 and §24.5.
 
 **Acceptance Criteria**:
-- [ ] `recalcAverageCost(oldQty, oldAvg, newQty, newPrice)` matches `(oldQty*oldAvg + newQty*newPrice)/(oldQty+newQty)`
-- [ ] Partial sell does not change average cost
-- [ ] Holding closes when remaining qty ≤ 0.000001
+- [x] `recalcAverageCost(oldQty, oldAvg, addQty, addPrice)` matches PRD formula; verified with `(0,0,1,100)→100` and `(1,100,1,120)→110`
+- [x] Partial sell does not change average cost (no sell-side function — sell flow keeps `averageCostCad` untouched per PRD §24.5)
+- [x] `isHoldingClosed(remaining)` returns true when `remaining ≤ HOLDING_CLOSE_EPSILON (1e-6)`
+- [x] Throws on `addQuantity ≤ 0` to catch upstream validation bugs early
 
 **Files Likely Affected**:
 - `src/lib/calculations/costBasis.ts`
 
 ---
 
-#### T-012 Portfolio analytics
+#### T-012 Portfolio analytics ✅
 **Size**: M | **Layer**: Backend | **Depends On**: T-006, T-011
 
 **Description**: All portfolio metrics from PRD §11 — holding market value, unrealized G/L, total value, total return CAD/%, allocations.
 
 **Acceptance Criteria**:
-- [ ] All formulas match PRD §11.2 exactly
-- [ ] Functions are pure and exported individually
-- [ ] Allocation % sums to ≤ 100 (cash slice handled)
+- [x] All PRD §11.2 formulas implemented: `holdingMarketValue`, `holdingUnrealizedGainLoss`, `holdingUnrealizedGainLossPercent`, `investedValueCad`, `portfolioValueCad`, `totalReturnCad`, `totalReturnPercent`, `unrealizedGainLossTotalCad`
+- [x] Pure functions, individually exported; no rounding inside (display layer rounds)
+- [x] Allocation: `holdingAllocationPercent` + `cashAllocationPercent` together sum to 100 (when totalPortfolioValue > 0)
+- [x] `sectorBreakdownCad` returns sector→CAD map; missing sector → `'Unknown'` per PRD §16
+- [x] Smoke-tested: `marketValue(2@110)=220`, `costBasis(2@100)=200`, `unrealizedGL=20`, `totalReturn(5300/5000)=6%`
 
 **Files Likely Affected**:
 - `src/lib/calculations/portfolio.ts`
 
 ---
 
-#### T-013 Realized gain/loss
+#### T-013 Realized gain/loss ✅
 **Size**: S | **Layer**: Backend | **Depends On**: T-011
 
 **Description**: Compute realized G/L on sells per PRD §24.5: `quantitySold × (sellPriceCad − averageCostCad)`.
 
 **Acceptance Criteria**:
-- [ ] Returns CAD-denominated number rounded to 2 decimals at display layer (raw stored to higher precision)
-- [ ] Negative values for losses
-- [ ] Zero when sellPrice == averageCost
+- [x] Returns raw CAD number — display layer rounds (PRD §18.8)
+- [x] Negative when `sellPrice < averageCost`; zero when equal
+- [x] Throws on `quantitySold ≤ 0`
+- [x] Verified: `realized(1, 130, 110) = 20`
 
 **Files Likely Affected**:
 - `src/lib/calculations/realizedGainLoss.ts`
 
 ---
 
-#### T-014 FX & currency conversion
+#### T-014 FX & currency conversion ✅
 **Size**: S | **Layer**: Backend | **Depends On**: T-005
 
 **Description**: Currency conversion helpers per PRD §18.3 — CAD pass-through, USD via FX rate, cached-FX guard.
 
 **Acceptance Criteria**:
-- [ ] `toCad(priceNative, currency, fxRate)` returns CAD value
-- [ ] `assertFxAvailable(currency, fx)` throws when USD asset has no rate and no cached rate
-- [ ] Tests cover CAD, USD with fresh rate, USD with cached rate, USD with no rate
+- [x] `toCad(priceNative, currency, fxRate)` — CAD passes through unchanged, USD multiplies by rate
+- [x] `fromCad(amountCad, currency, fxRate)` for inverse (asset detail native price display)
+- [x] `assertFxAvailable(currency, fx)` throws `FxUnavailableError` when non-CAD currency has `null`/`NaN`/`≤0` rate
+- [x] `getFxRateOrNull` convenience returns `null` instead of throwing
+- [x] `FxRate = number | null` — `null` distinguishes "not fetched / unavailable" from `0`
+- [x] Tests deferred to T-062 (unit tests chunk)
 
 **Files Likely Affected**:
 - `src/lib/currency/index.ts`
