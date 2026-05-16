@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+import '@fontsource-variable/newsreader';
 
+import { GrainOverlay } from '@/components/common/GrainOverlay';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -14,8 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-app-bg text-text-primary">{children}</body>
+    <html
+      lang="en"
+      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full bg-canvas text-ink">
+        <GrainOverlay />
+        {children}
+      </body>
     </html>
   );
 }
