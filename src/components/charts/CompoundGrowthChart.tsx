@@ -5,7 +5,7 @@ import { Line } from 'react-chartjs-2';
 
 import type { CompoundYearPoint } from '@/lib/compound';
 
-import { ensureChartRegistered } from './chartSetup';
+import { CHART_PALETTE, ensureChartRegistered, scaleDefaults } from './chartSetup';
 
 ensureChartRegistered();
 
@@ -14,20 +14,27 @@ export function CompoundGrowthChart({ points }: { points: CompoundYearPoint[] })
     labels: points.map((p) => `Y${p.year}`),
     datasets: [
       {
-        label: 'Contributions only',
+        label: 'Contributions',
         data: points.map((p) => p.contributedCad),
-        borderColor: 'rgb(100, 116, 139)',
-        backgroundColor: 'rgba(100, 116, 139, 0.05)',
+        borderColor: CHART_PALETTE.textMuted,
+        backgroundColor: 'transparent',
         fill: false,
-        tension: 0.1,
+        tension: 0.15,
+        borderWidth: 1,
+        borderDash: [4, 4],
+        pointRadius: 0,
       },
       {
-        label: 'Contributions + compound growth',
+        label: 'With compounding',
         data: points.map((p) => p.futureValueCad),
-        borderColor: 'rgb(37, 99, 235)',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        borderColor: CHART_PALETTE.accent,
+        backgroundColor: CHART_PALETTE.accentSoft,
         fill: true,
-        tension: 0.2,
+        tension: 0.25,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: CHART_PALETTE.accent,
       },
     ],
   };
@@ -35,24 +42,28 @@ export function CompoundGrowthChart({ points }: { points: CompoundYearPoint[] })
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom' as const },
+      legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 14 } },
       tooltip: {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) =>
-            `${ctx.dataset.label}: $${(ctx.parsed.y ?? 0).toFixed(0)}`,
+            `${ctx.dataset.label}: $${(ctx.parsed.y ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
         },
       },
     },
     scales: {
+      x: scaleDefaults(),
       y: {
+        ...scaleDefaults(),
         ticks: {
-          callback: (v: string | number) => `$${Number(v).toFixed(0)}`,
+          ...scaleDefaults().ticks,
+          callback: (v: string | number) =>
+            `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
         },
       },
     },
   };
   return (
-    <div className="h-72 w-full">
+    <div className="h-80 w-full">
       <Line data={data} options={options} />
     </div>
   );

@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 
-import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { LoadingState } from '@/components/common/LoadingState';
 import { getProvider } from '@/lib/market-data/provider';
 import { useSimulatorStore } from '@/store/simulatorStore';
 import type { HistoricalPricePoint } from '@/types/market';
 
-import { ensureChartRegistered } from './chartSetup';
+import { CHART_PALETTE, ensureChartRegistered, scaleDefaults } from './chartSetup';
 
 ensureChartRegistered();
 
@@ -43,20 +42,26 @@ export function AssetHistoryChart({ symbol }: { symbol: string }) {
   if (error) return <ErrorState message={error} />;
   if (!points || points.length < 2) {
     return (
-      <EmptyState message="Not enough historical data to render a chart." />
+      <p className="text-sm text-text-secondary">
+        Not enough historical data to render a chart.
+      </p>
     );
   }
 
   const data = {
-    labels: points.map((p) => new Date(p.timestamp).toLocaleDateString()),
+    labels: points.map((p) => p.timestamp.slice(0, 10)),
     datasets: [
       {
-        label: 'Close (native)',
+        label: 'Close',
         data: points.map((p) => p.closeNative),
-        borderColor: 'rgb(37, 99, 235)',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-        fill: true,
-        tension: 0.2,
+        borderColor: CHART_PALETTE.ink,
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.25,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: CHART_PALETTE.accent,
       },
     ],
   };
@@ -64,10 +69,14 @@ export function AssetHistoryChart({ symbol }: { symbol: string }) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
+    scales: {
+      x: { ...scaleDefaults(), ticks: { ...scaleDefaults().ticks, maxTicksLimit: 7 } },
+      y: scaleDefaults(),
+    },
   };
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-80 w-full">
       <Line data={data} options={options} />
     </div>
   );

@@ -3,13 +3,12 @@
 import type { TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
-import { EmptyState } from '@/components/common/EmptyState';
 import {
   selectPortfolioSnapshots,
   useSimulatorStore,
 } from '@/store/simulatorStore';
 
-import { ensureChartRegistered } from './chartSetup';
+import { CHART_PALETTE, ensureChartRegistered, scaleDefaults } from './chartSetup';
 
 ensureChartRegistered();
 
@@ -18,7 +17,10 @@ export function PortfolioValueChart() {
 
   if (snapshots.length < 2) {
     return (
-      <EmptyState message="Your portfolio chart will appear after more portfolio snapshots are recorded." />
+      <p className="text-sm text-text-secondary">
+        The chart appears after a few portfolio snapshots are recorded — usually
+        right after your first trade.
+      </p>
     );
   }
 
@@ -26,12 +28,16 @@ export function PortfolioValueChart() {
     labels: snapshots.map((s) => new Date(s.timestamp).toLocaleDateString()),
     datasets: [
       {
-        label: 'Portfolio Value (CAD)',
+        label: 'Portfolio value (CAD)',
         data: snapshots.map((s) => s.totalValueCad),
-        borderColor: 'rgb(37, 99, 235)',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        borderColor: CHART_PALETTE.accent,
+        backgroundColor: CHART_PALETTE.accentSoft,
         fill: true,
-        tension: 0.2,
+        tension: 0.25,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: CHART_PALETTE.accent,
       },
     ],
   };
@@ -49,16 +55,20 @@ export function PortfolioValueChart() {
       },
     },
     scales: {
+      x: { ...scaleDefaults(), ticks: { ...scaleDefaults().ticks, maxTicksLimit: 6 } },
       y: {
+        ...scaleDefaults(),
         ticks: {
-          callback: (v: string | number) => `$${Number(v).toFixed(0)}`,
+          ...scaleDefaults().ticks,
+          callback: (v: string | number) =>
+            `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
         },
       },
     },
   };
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-72 w-full">
       <Line data={data} options={options} />
     </div>
   );
