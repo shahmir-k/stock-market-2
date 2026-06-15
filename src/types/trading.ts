@@ -9,12 +9,16 @@ export type BuyOrderInput = {
   symbol: string;
   exchange?: string;
   quantity: number;
+  // Time-travel: YYYY-MM-DD. Undefined = today.
+  purchaseDate?: string;
 };
 
 // PRD §27.4 — caller-provided sell intent.
 export type SellOrderInput = {
   symbol: string;
   quantity: number;
+  // Time-travel: YYYY-MM-DD. Undefined = today.
+  purchaseDate?: string;
 };
 
 // PRD §27.4 — preview returned to UI before user confirms.
@@ -35,6 +39,14 @@ export type TradePreview = {
   estimatedRealizedGainLossCad?: number;
   quoteTimestamp: string;
   warnings: RiskWarning[];
+  // Time-travel: always set. Equals today (ISO) when not time-traveled.
+  purchaseDate: string;
+  isTimeTraveled: boolean;
+  // ISO date of the FX rate used. Equals `purchaseDate` when historical.
+  fxRateDate?: string;
+  // ISO date the price actually came from. May be < `purchaseDate` when the
+  // chosen day was a weekend/holiday and we resolved to the prior bar.
+  actualPriceDate?: string;
 };
 
 // PRD §27.4 — outcome of executeBuy/executeSell.

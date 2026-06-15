@@ -122,14 +122,17 @@ export function MoneyInput({
 }) {
   return (
     <FieldRoot label={label}>
-      <input
-        type="number"
-        value={value}
-        min={0}
-        step={step}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
-        className={INPUT_BASE}
-      />
+      <span className="flex items-baseline gap-1 border-b rule pb-1 transition-colors duration-[var(--dur-fast)] focus-within:border-[var(--color-accent)]">
+        <span className="text-text-muted">$</span>
+        <input
+          type="number"
+          value={value}
+          min={0}
+          step={step}
+          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          className="field-sizing-content min-w-0 bg-transparent text-base tabular text-ink outline-none"
+        />
+      </span>
     </FieldRoot>
   );
 }

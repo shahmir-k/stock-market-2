@@ -48,6 +48,9 @@ export type Holding = {
   lastQuoteAt: string;
   // Not in PRD §15.5 but persisted in PRD §34.4 (`holdings.quote_freshness`).
   quoteFreshness?: Freshness;
+  // Time-travel: earliest BUY date for this holding. Optional for backwards
+  // compat — existing rows without this value behave as "no gating".
+  firstPurchaseDate?: string;
 };
 
 // PRD §15.6 — immutable trade record. Lives in portfolio.ts because Portfolio owns
@@ -70,6 +73,13 @@ export type Transaction = {
   realizedGainLossCad?: number;
   timestamp: string;
   quoteTimestamp: string;
+  // Time-travel: ISO YYYY-MM-DD. Equals `timestamp`'s date when the trade was
+  // executed at "today". REQUIRED for new transactions; migration backfills
+  // existing rows with date(quote_timestamp).
+  purchaseDate: string;
+  // Time-travel: true iff `purchaseDate !== today` when the transaction was
+  // created. Always set; default false.
+  isTimeTraveled: boolean;
 };
 
 // PRD §15.7 — point on the portfolio value chart.

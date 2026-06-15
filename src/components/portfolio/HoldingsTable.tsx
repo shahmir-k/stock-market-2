@@ -56,6 +56,7 @@ export function HoldingsTable() {
           <tr className="border-b rule text-text-muted">
             {[
               'Symbol',
+              'First bought',
               'Name',
               'Sector',
               'Qty',
@@ -71,7 +72,7 @@ export function HoldingsTable() {
               <th
                 key={h || i}
                 className={`py-3 pr-4 text-[10px] font-medium uppercase tracking-[0.12em] ${
-                  i >= 3 && i <= 9 ? 'text-right' : ''
+                  i >= 4 && i <= 10 ? 'text-right' : ''
                 }`}
               >
                 {h}
@@ -90,6 +91,14 @@ export function HoldingsTable() {
             >
               <td className="py-4 pr-4">
                 <div className="font-medium text-ink">{h.symbol}</div>
+              </td>
+              <td className="py-4 pr-4 text-text-secondary text-xs tabular">
+                {h.firstPurchaseDate
+                  ? new Date(`${h.firstPurchaseDate}T00:00:00Z`).toLocaleDateString(
+                      undefined,
+                      { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' },
+                    )
+                  : '—'}
               </td>
               <td className="py-4 pr-4 text-text-secondary">
                 <span className="block max-w-[14ch] truncate" title={h.assetName}>

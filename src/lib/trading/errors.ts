@@ -8,7 +8,8 @@ export class TradeValidationError extends Error {
     | 'NOT_OWNED'
     | 'EXCEEDS_OWNED'
     | 'NO_QUOTE'
-    | 'UNSUPPORTED_CURRENCY';
+    | 'UNSUPPORTED_CURRENCY'
+    | 'BEFORE_FIRST_PURCHASE';
   constructor(
     code: TradeValidationError['code'],
     message: string,

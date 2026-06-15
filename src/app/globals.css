@@ -137,6 +137,16 @@ body {
   color: var(--color-text-muted);
 }
 
+/* Restore native <dialog> centering. Tailwind v4 preflight applies
+   `margin: 0` to the universal selector, which kills the UA-stylesheet's
+   `margin: auto` that centers modal dialogs in the viewport. Without this
+   rule every modal collapses to the top-left corner. Components that want
+   bespoke placement (e.g. LearningDrawer pinned to the right via
+   `ml-auto mr-0`) override per-instance with higher-specificity utilities. */
+dialog {
+  margin: auto;
+}
+
 /* Entrance animation primitive — used by Section, Modal, etc. */
 @keyframes fade-up {
   from {

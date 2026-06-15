@@ -57,6 +57,8 @@ function tx(overrides: Partial<Transaction> = {}): Transaction {
     totalCad: 100,
     quoteTimestamp: '2026-05-15T00:00:00Z',
     timestamp: '2026-05-15T00:00:00Z',
+    purchaseDate: '2026-05-15',
+    isTimeTraveled: false,
     ...overrides,
   };
 }

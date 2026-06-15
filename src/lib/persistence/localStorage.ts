@@ -2,15 +2,19 @@
 // Supabase is the source of truth (PRD §18.5); this is a recovery cache.
 
 import type {
+  Holding,
   LocalUser,
   MarketDataMode,
   Portfolio,
   RiskWarning,
   SimulationConfig,
+  Transaction,
 } from '@/types/portfolio';
 
 export const STORAGE_KEY = 'personal-stock-simulator-v1';
-export const STORAGE_VERSION = 1;
+// v2 (time-travel): adds Transaction.purchaseDate + isTimeTraveled and
+// Holding.firstPurchaseDate. v1 payloads are migrated on load.
+export const STORAGE_VERSION = 2;
 
 // Subset of store state we actually persist. Transient fields (auth status,
 // sync status, hydration flags) are recomputed on load.
@@ -73,10 +77,43 @@ export function loadFromLocalStorage(): LoadResult {
   if (!isPersistedStateShape(parsed)) {
     return { ok: false, reason: 'CORRUPTED' };
   }
-  if (parsed.version !== STORAGE_VERSION) {
-    return { ok: false, reason: 'VERSION_MISMATCH' };
+  if (parsed.version === STORAGE_VERSION) {
+    return { ok: true, state: parsed };
   }
-  return { ok: true, state: parsed };
+  // v1 → v2 (time-travel) migration: backfill missing fields rather than
+  // discarding the user's portfolio. Any earlier/unknown version still falls
+  // through to VERSION_MISMATCH.
+  if (parsed.version === 1) {
+    return { ok: true, state: migrateV1toV2(parsed) };
+  }
+  return { ok: false, reason: 'VERSION_MISMATCH' };
+}
+
+function migrateV1toV2(state: PersistedState): PersistedState {
+  const transactions: Transaction[] = state.portfolio.transactions.map((t) => ({
+    ...t,
+    purchaseDate: t.purchaseDate ?? t.timestamp.slice(0, 10),
+    isTimeTraveled: t.isTimeTraveled ?? false,
+  }));
+  // Backfill firstPurchaseDate from the earliest BUY for each symbol.
+  const earliestBySymbol = new Map<string, string>();
+  for (const t of transactions) {
+    if (t.type !== 'BUY') continue;
+    const prev = earliestBySymbol.get(t.symbol);
+    if (!prev || t.purchaseDate < prev) {
+      earliestBySymbol.set(t.symbol, t.purchaseDate);
+    }
+  }
+  const holdings: Holding[] = state.portfolio.holdings.map((h) => ({
+    ...h,
+    firstPurchaseDate:
+      h.firstPurchaseDate ?? earliestBySymbol.get(h.symbol) ?? undefined,
+  }));
+  return {
+    ...state,
+    version: STORAGE_VERSION,
+    portfolio: { ...state.portfolio, transactions, holdings },
+  };
 }
 
 export function clearLocalStorage(): void {

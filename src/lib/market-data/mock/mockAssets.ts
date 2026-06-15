@@ -13,6 +13,8 @@ import type {
   Exchange,
   FxResponseData,
   HistoricalPricePoint,
+  HistoricalQuoteResponseData,
+  HistoryRangeResponseData,
   QuoteResponseData,
 } from '@/types/market';
 
@@ -145,27 +147,26 @@ export function mockQuote(symbol: string): QuoteResponseData | null {
   };
 }
 
-export function mockHistory(
-  symbol: string,
-  outputsize = 30,
-): HistoricalPricePoint[] | null {
-  const asset = ASSET_BY_SYMBOL.get(symbol.toUpperCase());
-  if (!asset) return null;
+// Roughly 10 years of synthetic history per symbol. Generated once per
+// symbol and memoized so repeated calls (and the date-range filter below)
+// are cheap. The walk-backward + daily-noise scheme matches the original
+// 30-day generator so existing visual output is preserved.
+const FULL_HISTORY_DAYS = 3_652;
+const fullHistoryCache = new Map<string, HistoricalPricePoint[]>();
 
+function buildFullHistory(asset: MockAsset): HistoricalPricePoint[] {
   const rng = mulberry32(hashString(asset.symbol));
   const points: HistoricalPricePoint[] = [];
 
-  // Walk price backward from today's basePrice with bounded daily noise so
-  // the chart looks plausibly volatile without spiking to absurd values.
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
   let price = asset.basePrice;
-  for (let i = 0; i < outputsize; i += 1) {
+  for (let i = 0; i < FULL_HISTORY_DAYS; i += 1) {
     const date = new Date(today);
     date.setUTCDate(today.getUTCDate() - i);
 
-    const drift = (rng() - 0.5) * 0.04; // ±2% daily move
+    const drift = (rng() - 0.5) * 0.04;
     const open = round2(price * (1 + (rng() - 0.5) * 0.01));
     const close = round2(price * (1 + drift));
     const high = round2(Math.max(open, close) * (1 + rng() * 0.01));
@@ -186,6 +187,95 @@ export function mockHistory(
 
   // Chronological order (oldest → newest).
   return points.reverse();
+}
+
+function getFullHistory(symbol: string): HistoricalPricePoint[] | null {
+  const asset = ASSET_BY_SYMBOL.get(symbol.toUpperCase());
+  if (!asset) return null;
+  const key = asset.symbol;
+  let cached = fullHistoryCache.get(key);
+  if (!cached) {
+    cached = buildFullHistory(asset);
+    fullHistoryCache.set(key, cached);
+  }
+  return cached;
+}
+
+export function mockHistory(
+  symbol: string,
+  outputsize?: number,
+  opts?: { startDate?: string; endDate?: string },
+): HistoricalPricePoint[] | null {
+  const full = getFullHistory(symbol);
+  if (!full) return null;
+
+  if (opts && (opts.startDate || opts.endDate)) {
+    const start = opts.startDate;
+    const end = opts.endDate;
+    return full.filter((p) => {
+      const day = p.timestamp.slice(0, 10);
+      if (start && day < start) return false;
+      if (end && day > end) return false;
+      return true;
+    });
+  }
+
+  const size = outputsize ?? 30;
+  return full.slice(-size);
+}
+
+export function mockHistoricalQuote(
+  symbol: string,
+  date: string,
+): HistoricalQuoteResponseData | null {
+  const asset = ASSET_BY_SYMBOL.get(symbol.toUpperCase());
+  if (!asset) return null;
+  const series = mockHistory(symbol, undefined, { endDate: date });
+  if (!series || series.length === 0) return null;
+  const last = series[series.length - 1];
+  return {
+    symbol: asset.symbol,
+    date,
+    actualDate: last.timestamp.slice(0, 10),
+    closeNative: last.closeNative,
+    openNative: last.openNative,
+    highNative: last.highNative,
+    lowNative: last.lowNative,
+    currency: asset.currency,
+  };
+}
+
+// Deterministic FX walk around MOCK_FX_USD_CAD seeded by the requested date.
+// Bounded ±5% so trade preview totals stay realistic over a decade of history.
+export function mockHistoricalFx(
+  from: string,
+  to: string,
+  date: string,
+): FxResponseData | null {
+  const f = from.toUpperCase();
+  const t = to.toUpperCase();
+  if (t !== 'CAD') return null;
+  const tsIso = new Date(`${date}T00:00:00Z`).toISOString();
+  if (f === 'CAD') {
+    return { from: 'CAD', to: 'CAD', rate: 1, timestamp: tsIso, date, freshness: 'FRESH' };
+  }
+  if (f === 'USD') {
+    const rng = mulberry32(hashString(`fx:${date}`));
+    const drift = (rng() - 0.5) * 0.1; // ±5%
+    const rate = round2(MOCK_FX_USD_CAD * (1 + drift) * 1000) / 1000;
+    return { from: 'USD', to: 'CAD', rate, timestamp: tsIso, date, freshness: 'FRESH' };
+  }
+  return null;
+}
+
+export function mockHistoryRange(symbol: string): HistoryRangeResponseData | null {
+  const full = getFullHistory(symbol);
+  if (!full || full.length === 0) return null;
+  return {
+    symbol: ASSET_BY_SYMBOL.get(symbol.toUpperCase())!.symbol,
+    earliestDate: full[0].timestamp.slice(0, 10),
+    latestDate: full[full.length - 1].timestamp.slice(0, 10),
+  };
 }
 
 export function mockFx(from: string, to: string): FxResponseData | null {

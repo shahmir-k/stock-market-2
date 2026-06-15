@@ -51,6 +51,8 @@ function makeTransaction(
     realizedGainLossCad,
     timestamp: now,
     quoteTimestamp: preview.quoteTimestamp,
+    purchaseDate: preview.purchaseDate,
+    isTimeTraveled: preview.isTimeTraveled,
   };
 }
 
@@ -96,6 +98,14 @@ export function applyBuy(
       preview.quantity,
       preview.priceCad,
     );
+    // Time-travel (PRD §10.3): firstPurchaseDate only moves *earlier*. A
+    // later back-dated buy that predates the recorded first date IS a
+    // legitimate earlier purchase and should lower the gate.
+    const nextFirstPurchaseDate =
+      existing.firstPurchaseDate &&
+      existing.firstPurchaseDate <= preview.purchaseDate
+        ? existing.firstPurchaseDate
+        : preview.purchaseDate;
     nextHoldings = portfolio.holdings.map((h) =>
       h.symbol === preview.symbol
         ? {
@@ -107,6 +117,7 @@ export function applyBuy(
             nativeCurrency: preview.nativeCurrency,
             fxRateToCad: preview.fxRateToCad,
             lastQuoteAt: preview.quoteTimestamp,
+            firstPurchaseDate: nextFirstPurchaseDate,
           }
         : h,
     );
@@ -122,6 +133,7 @@ export function applyBuy(
       nativeCurrency: preview.nativeCurrency,
       fxRateToCad: preview.fxRateToCad,
       lastQuoteAt: preview.quoteTimestamp,
+      firstPurchaseDate: preview.purchaseDate,
     };
     nextHoldings = [...portfolio.holdings, fresh];
   }

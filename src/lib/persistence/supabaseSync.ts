@@ -147,6 +147,7 @@ export async function loadFromSupabase(
     fxRateToCad: Number(h.fx_rate_to_cad),
     lastQuoteAt: h.last_quote_at ?? '',
     quoteFreshness: (h.quote_freshness as Holding['quoteFreshness']) ?? undefined,
+    firstPurchaseDate: h.first_purchase_date ?? undefined,
   }));
 
   const transactions: Transaction[] = (transactionsRes.data ?? []).map((t) => ({
@@ -165,6 +166,8 @@ export async function loadFromSupabase(
       t.realized_gain_loss_cad === null ? undefined : Number(t.realized_gain_loss_cad),
     timestamp: t.created_at,
     quoteTimestamp: t.quote_timestamp,
+    purchaseDate: t.purchase_date,
+    isTimeTraveled: t.is_time_traveled,
   }));
 
   const snapshots: PortfolioSnapshot[] = (snapshotsRes.data ?? []).map((s) => ({
@@ -240,6 +243,8 @@ export async function persistAfterTrade(
     total_cad: transaction.totalCad,
     realized_gain_loss_cad: transaction.realizedGainLossCad ?? null,
     quote_timestamp: transaction.quoteTimestamp,
+    purchase_date: transaction.purchaseDate,
+    is_time_traveled: transaction.isTimeTraveled,
   });
 
   // 2. Update portfolio cash + realized G/L.
@@ -317,6 +322,7 @@ export async function persistHoldingsRefresh(
       fx_rate_to_cad: h.fxRateToCad,
       last_quote_at: h.lastQuoteAt || null,
       quote_freshness: h.quoteFreshness ?? null,
+      first_purchase_date: h.firstPurchaseDate ?? null,
     })),
     { onConflict: 'portfolio_id,symbol' },
   );

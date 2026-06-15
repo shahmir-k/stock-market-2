@@ -86,9 +86,16 @@ export default function BrowsePage() {
         ) : error ? (
           <ErrorState message={error} />
         ) : !hasSearched ? (
-          <p className="text-sm text-text-secondary">
-            Start typing above to see live market data from Twelve Data.
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-text-secondary">
+              Start typing above to see live market data from Twelve Data.
+            </p>
+            <p className="text-xs text-text-muted">
+              Showing the top 10 best and worst performing stocks of the day
+              requires a paid Twelve Data API subscription. The free tier
+              available here supports symbol search and individual quotes only.
+            </p>
+          </div>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-text-secondary">
             No supported stocks or ETFs match that query.

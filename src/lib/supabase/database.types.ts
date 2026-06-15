@@ -80,6 +80,7 @@ export type Database = {
           fx_rate_to_cad: number;
           last_quote_at: string | null;
           quote_freshness: string | null;
+          first_purchase_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -111,14 +112,17 @@ export type Database = {
           total_cad: number;
           realized_gain_loss_cad: number | null;
           quote_timestamp: string;
+          purchase_date: string;
+          is_time_traveled: boolean;
           created_at: string;
         };
         Insert: Omit<
           Database['public']['Tables']['transactions']['Row'],
-          'id' | 'created_at'
+          'id' | 'created_at' | 'is_time_traveled'
         > & {
           id?: string;
           created_at?: string;
+          is_time_traveled?: boolean;
         };
         Update: Partial<Database['public']['Tables']['transactions']['Insert']>;
         Relationships: [];

@@ -99,12 +99,35 @@ export type HistoricalPriceResponseData = {
 
 export type HistoricalPriceResponse = ApiResponse<HistoricalPriceResponseData>;
 
-// PRD §26.4 — FX.
+// Time-travel: single historical point flattened from /api/market/history?start_date=end_date=D.
+// `actualDate` is the bar's date when markets were closed on the requested `date`.
+export type HistoricalQuoteResponseData = {
+  symbol: string;
+  date: string;
+  actualDate: string;
+  closeNative: number;
+  openNative: number;
+  highNative: number;
+  lowNative: number;
+  currency: Currency;
+};
+export type HistoricalQuoteResponse = ApiResponse<HistoricalQuoteResponseData>;
+
+// Time-travel: slider bounds derived once per asset.
+export type HistoryRangeResponseData = {
+  symbol: string;
+  earliestDate: string;
+  latestDate: string;
+};
+export type HistoryRangeResponse = ApiResponse<HistoryRangeResponseData>;
+
+// PRD §26.4 — FX. `date` is populated when a historical date was requested.
 export type FxResponseData = {
   from: 'USD' | 'CAD';
   to: 'CAD';
   rate: number;
   timestamp: string;
+  date?: string;
   freshness: Freshness;
 };
 

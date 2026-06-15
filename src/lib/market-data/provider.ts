@@ -8,6 +8,8 @@ import type {
   AssetSearchResult,
   FxResponseData,
   HistoricalPricePoint,
+  HistoricalQuoteResponseData,
+  HistoryRangeResponseData,
   ProfileResponseData,
   QuoteResponseData,
 } from '@/types/market';
@@ -29,6 +31,17 @@ export interface MarketDataProvider {
     to: string,
   ): Promise<FxResponseData | null>;
   getProfile(symbol: string): Promise<ProfileResponseData | null>;
+  // Time-travel: historical price + FX + range queries.
+  getHistoricalQuoteAt(
+    symbol: string,
+    date: string,
+  ): Promise<HistoricalQuoteResponseData | null>;
+  getHistoricalExchangeRate(
+    from: string,
+    to: string,
+    date: string,
+  ): Promise<FxResponseData | null>;
+  getHistoryRange(symbol: string): Promise<HistoryRangeResponseData | null>;
 }
 
 export function getProvider(mode: MarketDataMode): MarketDataProvider {

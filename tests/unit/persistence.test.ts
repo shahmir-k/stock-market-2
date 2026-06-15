@@ -107,3 +107,81 @@ describe('clearLocalStorage', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 });
+
+describe('v1 → v2 (time-travel) migration', () => {
+  it('backfills Transaction.purchaseDate from timestamp.slice(0,10) and isTimeTraveled=false', () => {
+    const v1 = {
+      ...validState(),
+      version: 1,
+      portfolio: {
+        ...validState().portfolio,
+        transactions: [
+          {
+            id: 't1',
+            type: 'BUY',
+            symbol: 'TD.TO',
+            assetName: 'TD',
+            assetType: 'STOCK',
+            quantity: 1,
+            priceNative: 100,
+            nativeCurrency: 'CAD',
+            fxRateToCad: 1,
+            priceCad: 100,
+            totalCad: 100,
+            timestamp: '2025-08-04T12:00:00Z',
+            quoteTimestamp: '2025-08-04T12:00:00Z',
+            // purchaseDate + isTimeTraveled missing (legacy v1)
+          },
+        ],
+      },
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(v1));
+    const r = loadFromLocalStorage();
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.version).toBe(STORAGE_VERSION);
+    const tx = r.state.portfolio.transactions[0];
+    expect(tx.purchaseDate).toBe('2025-08-04');
+    expect(tx.isTimeTraveled).toBe(false);
+  });
+
+  it('backfills Holding.firstPurchaseDate from earliest BUY for that symbol', () => {
+    const v1 = {
+      ...validState(),
+      version: 1,
+      portfolio: {
+        ...validState().portfolio,
+        transactions: [
+          {
+            id: 't1', type: 'BUY', symbol: 'TD.TO', assetName: 'TD', assetType: 'STOCK',
+            quantity: 1, priceNative: 100, nativeCurrency: 'CAD', fxRateToCad: 1,
+            priceCad: 100, totalCad: 100,
+            timestamp: '2024-03-15T12:00:00Z', quoteTimestamp: '2024-03-15T12:00:00Z',
+          },
+          {
+            id: 't2', type: 'BUY', symbol: 'TD.TO', assetName: 'TD', assetType: 'STOCK',
+            quantity: 1, priceNative: 110, nativeCurrency: 'CAD', fxRateToCad: 1,
+            priceCad: 110, totalCad: 110,
+            timestamp: '2025-08-04T12:00:00Z', quoteTimestamp: '2025-08-04T12:00:00Z',
+          },
+        ],
+        holdings: [
+          {
+            symbol: 'TD.TO', assetName: 'TD', assetType: 'STOCK',
+            quantity: 2, averageCostCad: 105,
+            currentPriceNative: 110, currentPriceCad: 110,
+            nativeCurrency: 'CAD', fxRateToCad: 1,
+            lastQuoteAt: '2025-08-04T12:00:00Z',
+            // firstPurchaseDate missing
+          },
+        ],
+      },
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(v1));
+    const r = loadFromLocalStorage();
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const holding = r.state.portfolio.holdings[0];
+    expect(holding.firstPurchaseDate).toBe('2024-03-15');
+  });
+});

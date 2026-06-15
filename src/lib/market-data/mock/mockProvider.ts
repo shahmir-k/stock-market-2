@@ -11,13 +11,18 @@ import type {
   AssetSearchResult,
   FxResponseData,
   HistoricalPricePoint,
+  HistoricalQuoteResponseData,
+  HistoryRangeResponseData,
   ProfileResponseData,
   QuoteResponseData,
 } from '@/types/market';
 import {
   ASSET_BY_SYMBOL,
   mockFx,
+  mockHistoricalFx,
+  mockHistoricalQuote,
   mockHistory,
+  mockHistoryRange,
   mockQuote,
   mockSearch,
 } from './mockAssets';
@@ -58,6 +63,27 @@ export const mockMarketDataProvider = {
       symbol: asset.symbol,
       sector: asset.sector,
     };
+  },
+
+  async getHistoricalQuoteAt(
+    symbol: string,
+    date: string,
+  ): Promise<HistoricalQuoteResponseData | null> {
+    return mockHistoricalQuote(symbol, date);
+  },
+
+  async getHistoricalExchangeRate(
+    from: string,
+    to: string,
+    date: string,
+  ): Promise<FxResponseData | null> {
+    return mockHistoricalFx(from, to, date);
+  },
+
+  async getHistoryRange(
+    symbol: string,
+  ): Promise<HistoryRangeResponseData | null> {
+    return mockHistoryRange(symbol);
   },
 };
 

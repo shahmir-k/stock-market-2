@@ -34,7 +34,7 @@ export function ForwardCompound() {
         <NumField label="Starting amount" prefix="$" value={starting} onChange={setStarting} />
         <NumField label="Monthly contribution" prefix="$" value={monthly} onChange={setMonthly} />
         <NumField label="Annual return" suffix="%" value={annual} onChange={setAnnual} step={0.1} />
-        <NumField label="Years invested" value={years} onChange={setYears} />
+        <NumField label="Years invested" suffix="years" value={years} onChange={setYears} />
       </section>
 
       {/* Hero result: giant serif future value + supporting stats */}
@@ -118,7 +118,7 @@ function NumField({
           min={0}
           step={step}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="flex-1 bg-transparent font-display tabular text-2xl text-ink outline-none"
+          className="field-sizing-content min-w-0 bg-transparent font-display tabular text-2xl text-ink outline-none"
         />
         {suffix ? <span className="text-text-muted">{suffix}</span> : null}
       </span>

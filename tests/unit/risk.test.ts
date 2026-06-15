@@ -62,6 +62,8 @@ function buyPreview(overrides: Partial<TradePreview> = {}): TradePreview {
     estimatedCashAfterCad: 4900,
     quoteTimestamp: '2026-05-15T00:00:00Z',
     warnings: [],
+    purchaseDate: '2026-05-15',
+    isTimeTraveled: false,
     ...overrides,
   };
 }
@@ -92,6 +94,8 @@ function tx(overrides: Partial<Transaction> = {}): Transaction {
     totalCad: 100,
     quoteTimestamp: today,
     timestamp: today,
+    purchaseDate: today.slice(0, 10),
+    isTimeTraveled: false,
     ...overrides,
   };
 }

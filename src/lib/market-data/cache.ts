@@ -40,4 +40,9 @@ export const CACHE_TTL = {
   HISTORY_MS: 30 * 60 * 1000,
   // Company profile (sector/industry/website). Rarely changes; long TTL.
   PROFILE_MS: 24 * 60 * 60 * 1000,
+  // Time-travel: the earliest available date is essentially stable, so we can
+  // hold the range result for a full day before re-fetching.
+  HISTORY_RANGE_MS: 24 * 60 * 60 * 1000,
+  // Time-travel: a historical FX bar is immutable — cache for a week.
+  FX_HISTORICAL_MS: 7 * 24 * 60 * 60 * 1000,
 } as const;

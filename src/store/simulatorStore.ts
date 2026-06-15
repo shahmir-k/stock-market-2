@@ -63,6 +63,8 @@ import { buildSellPreview } from '@/lib/trading/sell';
 import type {
   AssetSearchResult,
   FxResponseData,
+  HistoricalQuoteResponseData,
+  HistoryRangeResponseData,
   QuoteResponseData,
 } from '@/types/market';
 import type {
@@ -121,6 +123,17 @@ export type SimulatorStoreActions = {
   getQuote(symbol: string, exchange?: string): Promise<QuoteResponseData>;
   refreshHoldingQuotes(): Promise<void>;
   refreshFxRate(from: 'USD', to: 'CAD'): Promise<FxResponseData>;
+  // Time-travel: historical data lookups for the TradeTicket slider.
+  getHistoricalQuoteAt(
+    symbol: string,
+    date: string,
+  ): Promise<HistoricalQuoteResponseData>;
+  getHistoricalFxAt(
+    from: 'USD',
+    to: 'CAD',
+    date: string,
+  ): Promise<FxResponseData>;
+  getHistoryRange(symbol: string): Promise<HistoryRangeResponseData>;
 
   previewBuy(order: BuyOrderInput): Promise<TradePreview>;
   executeBuy(preview: TradePreview): Promise<TradeResult>;
@@ -499,6 +512,39 @@ export const useSimulatorStore = create<SimulatorStore>()((set, get) => ({
     return fx;
   },
 
+  getHistoricalQuoteAt: async (symbol, date) => {
+    const provider = getProvider(get().marketDataMode);
+    const hq = await provider.getHistoricalQuoteAt(symbol, date);
+    if (!hq) {
+      throw new TradeValidationError(
+        'NO_QUOTE',
+        'No price data on that date.',
+      );
+    }
+    return hq;
+  },
+
+  getHistoricalFxAt: async (from, to, date) => {
+    const provider = getProvider(get().marketDataMode);
+    const fx = await provider.getHistoricalExchangeRate(from, to, date);
+    if (!fx) {
+      throw new TradeValidationError(
+        'UNSUPPORTED_CURRENCY',
+        'No FX rate for that date.',
+      );
+    }
+    return fx;
+  },
+
+  getHistoryRange: async (symbol) => {
+    const provider = getProvider(get().marketDataMode);
+    const r = await provider.getHistoryRange(symbol);
+    if (!r) {
+      throw new Error('History range unavailable');
+    }
+    return r;
+  },
+
   // -------- trading --------------------------------------------------------
 
   previewBuy: async (order) => {
@@ -510,16 +556,54 @@ export const useSimulatorStore = create<SimulatorStore>()((set, get) => ({
         'Quote unavailable for this asset.',
       );
     }
+
+    // Time-travel: when order.purchaseDate is present and not today, fetch
+    // the historical bar + historical FX (USD only).
+    const today = new Date().toISOString().slice(0, 10);
+    const isTimeTraveled =
+      typeof order.purchaseDate === 'string' && order.purchaseDate !== today;
+    let historicalQuote: HistoricalQuoteResponseData | undefined;
     let fxRate: number | null = null;
-    if (quote.currency === 'CAD') {
+
+    if (isTimeTraveled) {
+      const hq = await provider.getHistoricalQuoteAt(
+        order.symbol,
+        order.purchaseDate as string,
+      );
+      if (!hq) {
+        throw new TradeValidationError(
+          'NO_QUOTE',
+          'No price data on that date.',
+        );
+      }
+      historicalQuote = { ...hq, currency: quote.currency };
+      if (quote.currency === 'CAD') {
+        fxRate = 1;
+      } else {
+        const fx = await provider.getHistoricalExchangeRate(
+          'USD',
+          'CAD',
+          order.purchaseDate as string,
+        );
+        if (!fx) {
+          throw new TradeValidationError(
+            'UNSUPPORTED_CURRENCY',
+            'No FX rate for that date.',
+          );
+        }
+        fxRate = fx.rate;
+      }
+    } else if (quote.currency === 'CAD') {
       fxRate = 1;
     } else {
       const fx = await provider.getExchangeRate(quote.currency, 'CAD');
       fxRate = fx?.rate ?? get().fxRateUsdCad;
     }
+
     const draft = buildBuyPreview({
       order,
       quote,
+      historicalQuote,
       fxRate,
       currentCashCad: get().portfolio.cashCad,
       warnings: [],
@@ -591,16 +675,52 @@ export const useSimulatorStore = create<SimulatorStore>()((set, get) => ({
         'Quote unavailable for this asset.',
       );
     }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const isTimeTraveled =
+      typeof order.purchaseDate === 'string' && order.purchaseDate !== today;
+    let historicalQuote: HistoricalQuoteResponseData | undefined;
     let fxRate: number | null = null;
-    if (quote.currency === 'CAD') {
+
+    if (isTimeTraveled) {
+      const hq = await provider.getHistoricalQuoteAt(
+        order.symbol,
+        order.purchaseDate as string,
+      );
+      if (!hq) {
+        throw new TradeValidationError(
+          'NO_QUOTE',
+          'No price data on that date.',
+        );
+      }
+      historicalQuote = { ...hq, currency: quote.currency };
+      if (quote.currency === 'CAD') {
+        fxRate = 1;
+      } else {
+        const fx = await provider.getHistoricalExchangeRate(
+          'USD',
+          'CAD',
+          order.purchaseDate as string,
+        );
+        if (!fx) {
+          throw new TradeValidationError(
+            'UNSUPPORTED_CURRENCY',
+            'No FX rate for that date.',
+          );
+        }
+        fxRate = fx.rate;
+      }
+    } else if (quote.currency === 'CAD') {
       fxRate = 1;
     } else {
       const fx = await provider.getExchangeRate(quote.currency, 'CAD');
       fxRate = fx?.rate ?? get().fxRateUsdCad;
     }
+
     const draft = buildSellPreview({
       order,
       quote,
+      historicalQuote,
       fxRate,
       holding,
       currentCashCad: get().portfolio.cashCad,

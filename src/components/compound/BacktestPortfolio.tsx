@@ -150,7 +150,7 @@ export function BacktestPortfolio() {
                   onChange={(e) =>
                     onLegChange(i, { allocationPct: Number(e.target.value) || 0 })
                   }
-                  className="flex-1 bg-transparent font-display tabular text-2xl text-ink outline-none"
+                  className="field-sizing-content min-w-0 bg-transparent font-display tabular text-2xl text-ink outline-none"
                 />
                 <span className="text-text-muted">%</span>
               </span>

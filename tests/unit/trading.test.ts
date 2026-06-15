@@ -240,3 +240,241 @@ describe('applySell', () => {
     ).toThrow(TradeValidationError);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Time-travel — historical price + first-purchase gating
+// ---------------------------------------------------------------------------
+
+describe('buildBuyPreview — time travel', () => {
+  it('historicalQuote drives priceNative instead of live quote', () => {
+    const p = buildBuyPreview({
+      order: { symbol: 'TD.TO', quantity: 2, purchaseDate: '2020-01-02' },
+      quote: cadQuote({ priceNative: 100 }),
+      historicalQuote: {
+        symbol: 'TD.TO',
+        date: '2020-01-02',
+        actualDate: '2020-01-02',
+        closeNative: 50,
+        openNative: 50,
+        highNative: 51,
+        lowNative: 49,
+        currency: 'CAD',
+      },
+      fxRate: 1,
+      currentCashCad: 5000,
+    });
+    expect(p.priceNative).toBe(50);
+    expect(p.totalCad).toBe(100); // 2 × 50
+    expect(p.purchaseDate).toBe('2020-01-02');
+    expect(p.isTimeTraveled).toBe(true);
+    expect(p.actualPriceDate).toBe('2020-01-02');
+    expect(p.fxRateDate).toBe('2020-01-02');
+  });
+
+  it('today path (no historicalQuote, no order.purchaseDate) is byte-identical to legacy', () => {
+    const p = buildBuyPreview({
+      order: { symbol: 'TD.TO', quantity: 2 },
+      quote: cadQuote({ priceNative: 100 }),
+      fxRate: 1,
+      currentCashCad: 5000,
+    });
+    expect(p.isTimeTraveled).toBe(false);
+    expect(p.purchaseDate).toBe(new Date().toISOString().slice(0, 10));
+    expect(p.actualPriceDate).toBeUndefined();
+    expect(p.fxRateDate).toBeUndefined();
+  });
+});
+
+describe('buildSellPreview — time travel + firstPurchaseDate gate', () => {
+  const heldFrom2020 = {
+    symbol: 'TD.TO',
+    assetName: 'TD',
+    assetType: 'STOCK' as const,
+    quantity: 10,
+    averageCostCad: 100,
+    currentPriceNative: 120,
+    currentPriceCad: 120,
+    nativeCurrency: 'CAD',
+    fxRateToCad: 1,
+    lastQuoteAt: '2026-05-15T00:00:00Z',
+    firstPurchaseDate: '2020-01-02',
+  };
+
+  it('rejects sell with purchaseDate < firstPurchaseDate', () => {
+    expect(() =>
+      buildSellPreview({
+        order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2019-06-01' },
+        quote: cadQuote({ priceNative: 120 }),
+        fxRate: 1,
+        holding: heldFrom2020,
+        currentCashCad: 0,
+      }),
+    ).toThrow(TradeValidationError);
+  });
+
+  it('accepts sell at the boundary (purchaseDate === firstPurchaseDate)', () => {
+    const p = buildSellPreview({
+      order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2020-01-02' },
+      quote: cadQuote({ priceNative: 120 }),
+      historicalQuote: {
+        symbol: 'TD.TO',
+        date: '2020-01-02',
+        actualDate: '2020-01-02',
+        closeNative: 70,
+        openNative: 70,
+        highNative: 71,
+        lowNative: 69,
+        currency: 'CAD',
+      },
+      fxRate: 1,
+      holding: heldFrom2020,
+      currentCashCad: 0,
+    });
+    expect(p.purchaseDate).toBe('2020-01-02');
+    expect(p.priceNative).toBe(70);
+  });
+});
+
+describe('applyBuy — firstPurchaseDate invariant', () => {
+  function emptyPortfolio(): Portfolio {
+    return {
+      cashCad: 5000,
+      startingBalanceCad: 5000,
+      holdings: [],
+      transactions: [],
+      snapshots: [],
+      realizedGainLossCad: 0,
+    };
+  }
+
+  it('sets firstPurchaseDate on a newly created holding', () => {
+    const portfolio = emptyPortfolio();
+    const preview = buildBuyPreview({
+      order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2020-01-02' },
+      quote: cadQuote({ priceNative: 100 }),
+      historicalQuote: {
+        symbol: 'TD.TO',
+        date: '2020-01-02',
+        actualDate: '2020-01-02',
+        closeNative: 50,
+        openNative: 50,
+        highNative: 51,
+        lowNative: 49,
+        currency: 'CAD',
+      },
+      fxRate: 1,
+      currentCashCad: portfolio.cashCad,
+    });
+    const next = applyBuy(portfolio, preview).portfolio;
+    expect(next.holdings[0].firstPurchaseDate).toBe('2020-01-02');
+  });
+
+  it('keeps the earlier firstPurchaseDate when a later back-dated buy lands', () => {
+    let portfolio = emptyPortfolio();
+    portfolio = applyBuy(
+      portfolio,
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2018-06-01' },
+        quote: cadQuote({ priceNative: 100 }),
+        historicalQuote: {
+          symbol: 'TD.TO',
+          date: '2018-06-01',
+          actualDate: '2018-06-01',
+          closeNative: 50,
+          openNative: 50,
+          highNative: 51,
+          lowNative: 49,
+          currency: 'CAD',
+        },
+        fxRate: 1,
+        currentCashCad: portfolio.cashCad,
+      }),
+    ).portfolio;
+    portfolio = applyBuy(
+      portfolio,
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2020-01-02' },
+        quote: cadQuote({ priceNative: 100 }),
+        historicalQuote: {
+          symbol: 'TD.TO',
+          date: '2020-01-02',
+          actualDate: '2020-01-02',
+          closeNative: 60,
+          openNative: 60,
+          highNative: 61,
+          lowNative: 59,
+          currency: 'CAD',
+        },
+        fxRate: 1,
+        currentCashCad: portfolio.cashCad,
+      }),
+    ).portfolio;
+    expect(portfolio.holdings[0].firstPurchaseDate).toBe('2018-06-01');
+  });
+
+  it('moves firstPurchaseDate earlier when the new buy is older than the recorded first', () => {
+    let portfolio = emptyPortfolio();
+    portfolio = applyBuy(
+      portfolio,
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2020-01-02' },
+        quote: cadQuote({ priceNative: 100 }),
+        historicalQuote: {
+          symbol: 'TD.TO',
+          date: '2020-01-02',
+          actualDate: '2020-01-02',
+          closeNative: 60,
+          openNative: 60,
+          highNative: 61,
+          lowNative: 59,
+          currency: 'CAD',
+        },
+        fxRate: 1,
+        currentCashCad: portfolio.cashCad,
+      }),
+    ).portfolio;
+    portfolio = applyBuy(
+      portfolio,
+      buildBuyPreview({
+        order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2016-01-04' },
+        quote: cadQuote({ priceNative: 100 }),
+        historicalQuote: {
+          symbol: 'TD.TO',
+          date: '2016-01-04',
+          actualDate: '2016-01-04',
+          closeNative: 40,
+          openNative: 40,
+          highNative: 41,
+          lowNative: 39,
+          currency: 'CAD',
+        },
+        fxRate: 1,
+        currentCashCad: portfolio.cashCad,
+      }),
+    ).portfolio;
+    expect(portfolio.holdings[0].firstPurchaseDate).toBe('2016-01-04');
+  });
+
+  it('threads purchaseDate + isTimeTraveled through to the transaction', () => {
+    const portfolio = emptyPortfolio();
+    const preview = buildBuyPreview({
+      order: { symbol: 'TD.TO', quantity: 1, purchaseDate: '2020-01-02' },
+      quote: cadQuote({ priceNative: 100 }),
+      historicalQuote: {
+        symbol: 'TD.TO',
+        date: '2020-01-02',
+        actualDate: '2020-01-02',
+        closeNative: 50,
+        openNative: 50,
+        highNative: 51,
+        lowNative: 49,
+        currency: 'CAD',
+      },
+      fxRate: 1,
+      currentCashCad: portfolio.cashCad,
+    });
+    const result = applyBuy(portfolio, preview);
+    expect(result.transaction.purchaseDate).toBe('2020-01-02');
+    expect(result.transaction.isTimeTraveled).toBe(true);
+  });
+});

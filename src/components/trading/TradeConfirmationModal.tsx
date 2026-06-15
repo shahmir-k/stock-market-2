@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
+import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
 import { Eyebrow } from '@/components/common/Eyebrow';
@@ -11,6 +12,15 @@ import { LEARN } from '@/lib/learning';
 import type { TradePreview } from '@/types/trading';
 
 import { RiskWarningInline } from './RiskWarningInline';
+
+function formatPurchaseDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
 
 export function TradeConfirmationModal({
   open,
@@ -52,7 +62,14 @@ export function TradeConfirmationModal({
         <div className="rounded-[calc(1rem-0.375rem)] border rule bg-surface">
           <div className="w-[34rem] max-w-[calc(100vw-2.5rem)] p-8">
             {/* Header */}
-            <Eyebrow>{isBuy ? 'Confirm buy' : 'Confirm sell'}</Eyebrow>
+            <div className="flex items-center justify-between gap-3">
+              <Eyebrow>{isBuy ? 'Confirm buy' : 'Confirm sell'}</Eyebrow>
+              {preview.isTimeTraveled ? (
+                <Badge tone="accent" variant="soft">
+                  Time-traveled
+                </Badge>
+              ) : null}
+            </div>
             <h2 className="font-display mt-2 text-2xl text-ink">
               {preview.symbol}
               <span className="text-text-muted"> · {preview.assetName}</span>
@@ -60,6 +77,13 @@ export function TradeConfirmationModal({
 
             {/* Definition list — hairline rows, no boxed dl */}
             <dl className="mt-6 divide-y rule border-y">
+              {preview.isTimeTraveled ? (
+                <Row label="Purchase date">
+                  <span className="tabular">
+                    {formatPurchaseDate(preview.purchaseDate)}
+                  </span>
+                </Row>
+              ) : null}
               <Row label="Price">
                 <span className="tabular">
                   {preview.priceNative.toFixed(2)} {preview.nativeCurrency}

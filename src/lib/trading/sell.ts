@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { isHoldingClosed } from '@/lib/calculations/costBasis';
 import { realizedGainLossOnSell } from '@/lib/calculations/realizedGainLoss';
 import { assertFxAvailable, FxUnavailableError, toCad, type FxRate } from '@/lib/currency';
-import type { QuoteResponseData } from '@/types/market';
+import type { HistoricalQuoteResponseData, QuoteResponseData } from '@/types/market';
 import type { Holding, RiskWarning } from '@/types/portfolio';
 import type { SellOrderInput, TradePreview } from '@/types/trading';
 
@@ -14,6 +14,8 @@ import { TradeValidationError } from './errors';
 export type BuildSellPreviewInput = {
   order: SellOrderInput;
   quote: QuoteResponseData;
+  // Time-travel: when present, drives `priceNative` instead of the live quote.
+  historicalQuote?: HistoricalQuoteResponseData;
   fxRate: FxRate;
   holding: Holding | null;
   currentCashCad: number;
@@ -21,7 +23,15 @@ export type BuildSellPreviewInput = {
 };
 
 export function buildSellPreview(input: BuildSellPreviewInput): TradePreview {
-  const { order, quote, fxRate, holding, currentCashCad, warnings = [] } = input;
+  const {
+    order,
+    quote,
+    historicalQuote,
+    fxRate,
+    holding,
+    currentCashCad,
+    warnings = [],
+  } = input;
 
   // Ownership validation (PRD §10.2).
   if (!holding) {
@@ -30,6 +40,19 @@ export function buildSellPreview(input: BuildSellPreviewInput): TradePreview {
       'You do not own this asset.',
     );
   }
+
+  // Time-travel: gate sell on first-purchase date (PRD §10.2 + §13).
+  if (
+    order.purchaseDate &&
+    holding.firstPurchaseDate &&
+    order.purchaseDate < holding.firstPurchaseDate
+  ) {
+    throw new TradeValidationError(
+      'BEFORE_FIRST_PURCHASE',
+      `You didn't own ${holding.symbol} before ${holding.firstPurchaseDate}.`,
+    );
+  }
+
   if (!Number.isFinite(order.quantity) || order.quantity <= 0) {
     throw new TradeValidationError(
       'INVALID_QUANTITY',
@@ -42,7 +65,9 @@ export function buildSellPreview(input: BuildSellPreviewInput): TradePreview {
       'You cannot sell more shares than you own.',
     );
   }
-  if (!Number.isFinite(quote.priceNative) || quote.priceNative <= 0) {
+
+  const priceNative = historicalQuote?.closeNative ?? quote.priceNative;
+  if (!Number.isFinite(priceNative) || priceNative <= 0) {
     throw new TradeValidationError(
       'NO_QUOTE',
       'Quote unavailable for this asset.',
@@ -62,7 +87,7 @@ export function buildSellPreview(input: BuildSellPreviewInput): TradePreview {
   }
 
   const effectiveFxRate = quote.currency === 'CAD' ? 1 : (fxRate as number);
-  const priceCad = toCad(quote.priceNative, quote.currency, fxRate);
+  const priceCad = toCad(priceNative, quote.currency, fxRate);
   const totalCad = order.quantity * priceCad;
 
   // Realized G/L estimate (PRD §24.5). averageCostCad is unchanged on sells.
@@ -76,6 +101,14 @@ export function buildSellPreview(input: BuildSellPreviewInput): TradePreview {
   // Note: closing logic also lives in apply.ts; this is just the preview.
   void isHoldingClosed(remaining);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const purchaseDate =
+    historicalQuote?.date ?? order.purchaseDate ?? today;
+  const isTimeTraveled = Boolean(historicalQuote) || purchaseDate !== today;
+  const quoteTimestamp = historicalQuote
+    ? new Date(`${historicalQuote.actualDate}T00:00:00Z`).toISOString()
+    : quote.quoteTimestamp;
+
   return {
     id: uuidv4(),
     type: 'SELL',
@@ -83,14 +116,18 @@ export function buildSellPreview(input: BuildSellPreviewInput): TradePreview {
     assetName: holding.assetName,
     assetType: holding.assetType,
     quantity: order.quantity,
-    priceNative: quote.priceNative,
+    priceNative,
     nativeCurrency: quote.currency,
     fxRateToCad: effectiveFxRate,
     priceCad,
     totalCad,
     estimatedCashAfterCad: currentCashCad + totalCad,
     estimatedRealizedGainLossCad: realized,
-    quoteTimestamp: quote.quoteTimestamp,
+    quoteTimestamp,
     warnings,
+    purchaseDate,
+    isTimeTraveled,
+    ...(isTimeTraveled ? { fxRateDate: purchaseDate } : {}),
+    ...(historicalQuote ? { actualPriceDate: historicalQuote.actualDate } : {}),
   };
 }

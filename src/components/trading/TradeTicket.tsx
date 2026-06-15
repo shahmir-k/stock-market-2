@@ -1,17 +1,27 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/common/Button';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
 import { TradeValidationError } from '@/lib/trading/errors';
 import { useSimulatorStore } from '@/store/simulatorStore';
-import type { QuoteResponseData } from '@/types/market';
+import type {
+  FxResponseData,
+  HistoricalQuoteResponseData,
+  HistoryRangeResponseData,
+  QuoteResponseData,
+} from '@/types/market';
 import type { TradePreview } from '@/types/trading';
 
+import { HistoricalDateSlider } from './HistoricalDateSlider';
 import { TradeConfirmationModal } from './TradeConfirmationModal';
 
 type Mode = 'BUY' | 'SELL';
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export function TradeTicket({
   symbol,
@@ -26,6 +36,9 @@ export function TradeTicket({
   const previewSell = useSimulatorStore((s) => s.previewSell);
   const executeBuy = useSimulatorStore((s) => s.executeBuy);
   const executeSell = useSimulatorStore((s) => s.executeSell);
+  const getHistoricalQuoteAt = useSimulatorStore((s) => s.getHistoricalQuoteAt);
+  const getHistoricalFxAt = useSimulatorStore((s) => s.getHistoricalFxAt);
+  const getHistoryRange = useSimulatorStore((s) => s.getHistoryRange);
   const cashCad = useSimulatorStore((s) => s.portfolio.cashCad);
   const holding = useSimulatorStore((s) =>
     s.portfolio.holdings.find((h) => h.symbol === symbol),
@@ -39,26 +52,130 @@ export function TradeTicket({
   const [executing, setExecuting] = useState(false);
   const [executeErrors, setExecuteErrors] = useState<string[] | undefined>();
 
+  // Time-travel state.
+  const [purchaseDate, setPurchaseDate] = useState<string>(todayIso);
+  const [range, setRange] = useState<HistoryRangeResponseData | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(true);
+  const [rangeError, setRangeError] = useState<string | null>(null);
+  const [historicalQuote, setHistoricalQuote] =
+    useState<HistoricalQuoteResponseData | null>(null);
+  const [historicalFx, setHistoricalFx] = useState<FxResponseData | null>(null);
+  const [chipsLoading, setChipsLoading] = useState(false);
+
+  // Load asset's slider bounds once per symbol.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      setRangeLoading(true);
+      setRangeError(null);
+      try {
+        const r = await getHistoryRange(symbol);
+        if (!cancelled) {
+          setRange(r);
+          setRangeLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setRangeError(
+            "Couldn't load this asset's price history. Try again.",
+          );
+          setRangeLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol, getHistoryRange]);
+
+  // Debounced (200ms) preview-chip fetch when purchaseDate ≠ today.
+  useEffect(() => {
+    let cancelled = false;
+    const today = todayIso();
+    const handle = setTimeout(async () => {
+      if (cancelled) return;
+      if (purchaseDate === today) {
+        setHistoricalQuote(null);
+        setHistoricalFx(null);
+        setChipsLoading(false);
+        return;
+      }
+      setChipsLoading(true);
+      try {
+        const hq = await getHistoricalQuoteAt(symbol, purchaseDate);
+        if (cancelled) return;
+        setHistoricalQuote(hq);
+        if (quote.currency === 'USD') {
+          const fx = await getHistoricalFxAt('USD', 'CAD', purchaseDate);
+          if (!cancelled) setHistoricalFx(fx);
+        } else {
+          setHistoricalFx(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setHistoricalQuote(null);
+          setHistoricalFx(null);
+        }
+      } finally {
+        if (!cancelled) setChipsLoading(false);
+      }
+    }, purchaseDate === today ? 0 : 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [
+    purchaseDate,
+    symbol,
+    quote.currency,
+    getHistoricalQuoteAt,
+    getHistoricalFxAt,
+  ]);
+
   const qtyNum = Number(qty);
+  const isTimeTraveled = purchaseDate !== todayIso();
+
   const priceCad = useMemo(() => {
+    // Use the historical close + historical FX when the slider is back-dated.
+    if (isTimeTraveled && historicalQuote) {
+      const histFxRate =
+        quote.currency === 'CAD' ? 1 : historicalFx?.rate ?? null;
+      if (quote.currency !== 'CAD' && histFxRate === null) return null;
+      return historicalQuote.closeNative * (histFxRate ?? 1);
+    }
     if (quote.currency === 'CAD') return quote.priceNative;
     if (fxRate === null) return null;
     return quote.priceNative * fxRate;
-  }, [quote, fxRate]);
+  }, [isTimeTraveled, historicalQuote, historicalFx, quote, fxRate]);
 
   const estimatedTotalCad =
     priceCad !== null && Number.isFinite(qtyNum) && qtyNum > 0
       ? qtyNum * priceCad
       : null;
 
+  // Visible reason copy when SELL slider is clamped by firstPurchaseDate.
+  const sellMinDateReason =
+    mode === 'SELL' && holding?.firstPurchaseDate
+      ? `You didn't own ${symbol} before ${holding.firstPurchaseDate}.`
+      : undefined;
+
+  // Disable Preview when historical fetch failed mid-flight.
+  const historicalUnavailable =
+    isTimeTraveled && !chipsLoading && historicalQuote === null;
+
   const onPreview = async () => {
     setValidationErr(null);
     setExecuteErrors(undefined);
     try {
+      const orderBase = { symbol, quantity: qtyNum };
+      const orderWithDate = isTimeTraveled
+        ? { ...orderBase, purchaseDate }
+        : orderBase;
       const next =
         mode === 'BUY'
-          ? await previewBuy({ symbol, quantity: qtyNum })
-          : await previewSell({ symbol, quantity: qtyNum });
+          ? await previewBuy(orderWithDate)
+          : await previewSell(orderWithDate);
       setPreview(next);
       setConfirmOpen(true);
     } catch (err) {
@@ -133,6 +250,92 @@ export function TradeTicket({
         </p>
       ) : null}
 
+      {/* Purchase-date slider — time-travel feature. */}
+      {rangeError ? (
+        <div className="mt-6">
+          <p role="alert" className="text-sm text-[var(--color-danger)]">
+            {rangeError}
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-2"
+            onClick={() => {
+              setRangeError(null);
+              setRangeLoading(true);
+              void (async () => {
+                try {
+                  const r = await getHistoryRange(symbol);
+                  setRange(r);
+                  setRangeLoading(false);
+                } catch {
+                  setRangeError(
+                    "Couldn't load this asset's price history. Try again.",
+                  );
+                  setRangeLoading(false);
+                }
+              })();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <HistoricalDateSlider
+          symbol={symbol}
+          value={purchaseDate}
+          earliestDate={range?.earliestDate ?? null}
+          latestDate={range?.latestDate ?? todayIso()}
+          minDate={mode === 'SELL' ? holding?.firstPurchaseDate : undefined}
+          minDateReason={sellMinDateReason}
+          onChange={setPurchaseDate}
+          loading={rangeLoading}
+        />
+      )}
+
+      {/* Historical preview chips — only when time-traveled. */}
+      {isTimeTraveled ? (
+        <dl className="mt-4 space-y-1.5 text-xs">
+          <div className="flex justify-between">
+            <dt className="text-text-muted">Price on {purchaseDate}</dt>
+            <dd className="tabular text-ink">
+              {chipsLoading ? (
+                <span className="text-text-muted">…</span>
+              ) : historicalQuote ? (
+                `${historicalQuote.closeNative.toFixed(2)} ${quote.currency}`
+              ) : (
+                <span className="text-text-muted">—</span>
+              )}
+            </dd>
+          </div>
+          {historicalQuote && historicalQuote.actualDate !== purchaseDate ? (
+            <div className="text-text-muted">
+              Used close of {historicalQuote.actualDate} (markets closed)
+            </div>
+          ) : null}
+          {quote.currency === 'USD' ? (
+            <div className="flex justify-between">
+              <dt className="text-text-muted">FX on that date</dt>
+              <dd className="tabular text-ink">
+                {chipsLoading ? (
+                  <span className="text-text-muted">…</span>
+                ) : historicalFx ? (
+                  historicalFx.rate.toFixed(4)
+                ) : (
+                  <span className="text-text-muted">—</span>
+                )}
+              </dd>
+            </div>
+          ) : null}
+          {historicalUnavailable ? (
+            <p role="alert" className="text-[var(--color-danger)]">
+              No price data on that date.
+            </p>
+          ) : null}
+        </dl>
+      ) : null}
+
       {/* Quantity input — hairline underline, no boxed border */}
       <div className="mt-6">
         <label
@@ -203,7 +406,10 @@ export function TradeTicket({
         disabled={
           !Number.isFinite(qtyNum) ||
           qtyNum <= 0 ||
-          (mode === 'SELL' && (!holding || qtyNum > holding.quantity))
+          (mode === 'SELL' && (!holding || qtyNum > holding.quantity)) ||
+          historicalUnavailable ||
+          chipsLoading ||
+          rangeLoading
         }
       >
         Preview {mode === 'BUY' ? 'Buy' : 'Sell'} →

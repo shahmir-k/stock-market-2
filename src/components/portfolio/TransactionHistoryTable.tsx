@@ -1,5 +1,6 @@
 'use client';
 
+import { Badge } from '@/components/common/Badge';
 import { CurrencyValue } from '@/components/common/CurrencyValue';
 import { Eyebrow } from '@/components/common/Eyebrow';
 import {
@@ -8,13 +9,14 @@ import {
 } from '@/store/simulatorStore';
 import type { Transaction } from '@/types/portfolio';
 
-// Timeline-style transaction history. Groups trades by calendar day; each
-// day is a small editorial section with the date as a serif heading and
-// the trades listed beneath as hairline-separated rows.
+// Timeline-style transaction history grouped by **purchase date** (the
+// settlement day chosen by the user), not the wall-clock created-at. This
+// is what the time-travel feature surfaces — a 2010 buy logged today
+// belongs in the 2010 column visually.
 function groupByDay(txs: Transaction[]): Array<{ day: string; items: Transaction[] }> {
   const groups = new Map<string, Transaction[]>();
   for (const t of txs) {
-    const day = t.timestamp.slice(0, 10);
+    const day = t.purchaseDate;
     if (!groups.has(day)) groups.set(day, []);
     groups.get(day)!.push(t);
   }
@@ -24,13 +26,31 @@ function groupByDay(txs: Transaction[]): Array<{ day: string; items: Transaction
 }
 
 function formatDay(iso: string): string {
-  const d = new Date(iso);
+  // `iso` is YYYY-MM-DD (from purchaseDate); construct as UTC so the local
+  // tz can't shift the date back by a day.
+  const d = new Date(`${iso}T00:00:00Z`);
   return d.toLocaleDateString(undefined, {
     weekday: 'short',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'UTC',
   });
+}
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  const diffMo = Math.floor(diffDay / 30);
+  if (diffMo < 12) return `${diffMo}mo ago`;
+  return `${Math.floor(diffMo / 12)}y ago`;
 }
 
 export function TransactionHistoryTable() {
@@ -73,6 +93,11 @@ export function TransactionHistoryTable() {
                 </span>
                 <span className="text-ink">
                   <span className="font-medium">{t.symbol}</span>
+                  {t.isTimeTraveled ? (
+                    <Badge tone="accent" variant="text" className="ml-2">
+                      Time-traveled
+                    </Badge>
+                  ) : null}
                   <span className="text-text-muted">
                     {' · '}
                     <span className="tabular">
@@ -83,6 +108,9 @@ export function TransactionHistoryTable() {
                     {t.nativeCurrency !== 'CAD' ? (
                       <span className="text-xs">(fx {t.fxRateToCad.toFixed(4)})</span>
                     ) : null}
+                  </span>
+                  <span className="block text-[11px] text-text-muted">
+                    logged {timeAgo(t.timestamp)}
                   </span>
                 </span>
                 <span className="tabular text-right text-ink">
